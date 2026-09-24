@@ -19,6 +19,18 @@
 //  (`withAppBuildGradle` from a local config plugin), so the spike doubles as
 //  the first real test of that recipe.
 //
+//  RELATIONSHIP TO `../../plugin/withOnDeviceLlmAndroid.js` (the package's own,
+//  published config plugin, added afterwards). This example deliberately does
+//  NOT also list that plugin in `app.json`: `spike.gradle` already carries the
+//  ML Kit dependency, the minSdk floor and the Kotlin metadata-skip flag for
+//  this app, so adding the published plugin here would either duplicate those
+//  edits (harmless — every edit in both plugins is idempotent) or just be dead
+//  weight, and either way would make it unclear from reading `app.json` which
+//  plugin is actually responsible for the example building. The published
+//  plugin's own correctness is exercised by `plugin/__tests__/` (pure content-
+//  transform vitest tests, no Expo project needed) instead of by this example.
+//
+
 const { withAppBuildGradle } = require('expo/config-plugins');
 
 const MARKER = 'spike/spike.gradle';
