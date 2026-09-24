@@ -181,6 +181,23 @@ be region- or account-gated, and its bootloader state may disqualify it outright
 
 ## 3. Run the probe FIRST — it decides whether the rest is worth anything
 
+> **FINDING (2026-09-23): Firebase Test Lab is not viable for this suite.**
+> The probe was run on three physical generations — Pixel 9 Pro (`caiman`,
+> API 35), Pixel 10 (`frankel`, API 36), Pixel 11 (`cubs`, API 37) — and all
+> three returned `checkStatus() = UNAVAILABLE` in under 100ms. Uniformity
+> across allowlisted models and OS levels means this is a fleet property,
+> not device eligibility: Test Lab units evidently lack the Google-account /
+> Play provisioning AICore requires. Nothing was previously documented about
+> this anywhere public; treat it as settled unless Google changes the fleet.
+> What the runs DID confirm on real hardware: the consumer-supplied
+> `implementation` + `compileOnly` firewall loads ML Kit on-device (register
+> item 11, first half), real SDK calls dispatch through the metadata
+> workaround (item 10, partially), and the four `FeatureStatus` constants
+> match the bytecode read (0/1/2/3). Executing the remainder of the register
+> requires a personally-provisioned allowlisted device (base Pixel 9 is the
+> cheapest unambiguous choice; verify a-series models against Google's live
+> supported-devices list before buying one).
+
 ```bash
 cd example/android
 PKG=expo.modules.ondevicellmandroid.example
