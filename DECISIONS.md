@@ -1,0 +1,158 @@
+# Decisions
+
+Newest first. Each entry: what was decided, why, and what evidence it rests on. The supporting research is `docs/research/android-genai.md`, which is this package's Phase 0 and was read from the shipping AARs with `javap` rather than from documentation.
+
+**Provenance.** D2–D5 below were originally written as D33–D36 in the main package's `DECISIONS.md`, during the single-package wave 1 (2026-09-23). They are renumbered here because this repository's register starts at 1 and a decision file whose first entry is D33 is a decision file nobody can navigate; the original numbering is recorded on each entry so the main package's cross-references still resolve. Their reasoning is unchanged except where D1 or D6 changed the premises, which is marked in place. Decisions D1–D32 of the main package (the contract, the router, the context manager, the Apple provider) still govern this package through the peer dependency and are not restated here.
+
+---
+
+## 2026-09-23 — The split
+
+### D1: The Android provider ships as its own package, `@taaltreelabs/on-device-llm-android`
+
+Maintainer decision, taken after wave 1 landed the Kotlin bridge in the main package. The main package's own register left this open with a stay-single-package default and three tripwires (see [Tripwires](#tripwires--what-wave-2-still-owes) below); the maintainer resolved it ahead of them, and the deciding argument is not any of the three.
+
+**The deciding argument is the name.** `@taaltreelabs/on-device-llm` promises on-device, and for its Apple provider that is unqualified: the FoundationModels framework sends nothing off the device. Google's terms for the ML Kit GenAI SDK say, verbatim, *"The ML Kit APIs also send metrics about the performance and utilization of the APIs in your app to Google"*, and then place the disclosure duty on the app developer: *"You are responsible for informing users of your app about Google's processing of ML Kit metrics data as required by applicable law."* So the honest description of this provider is **on-device inference, but metrics leave the device** — and that is a materially different promise from the one on the tin.
+
+A single package can *document* that difference, and the single-package plan did. What a single package cannot do is make a developer encounter it. A README section is read by people who go looking; a separate package with its own name has to be installed on purpose, and its README's first substantive section is the one that matters. The same argument applies to the 18+ age gate, which constrains the *consumer's* app and not merely the library author, and which a language-learning or general-audience app very plausibly breaches without ever reading a line about it.
+
+Three things follow, and they are the practical content of this decision:
+
+1. **The native module is renamed to `OnDeviceLlmAndroid`.** In the single package both platforms registered as `OnDeviceLlm`, which meant the registered name carried no information: `requireNativeModule('OnDeviceLlm')` could hand back either implementation, and the TypeScript resolver had to work out which by inspecting it. Duck-typing could not do that either — this module's method set is a *subset* of the Swift module's by design, so an iOS device satisfies every check — which is why the Android resolver needed a `Platform.OS` gate that the Apple one did not. One name, one implementation, end of masquerade. See D6 for what else the shared name was costing.
+2. **The `compileOnly` firewall is unchanged (D2).** It was never a substitute for the split and the split is not a substitute for it. The firewall is what keeps an app that installs this package but has not opted in from shipping Play Services and a Firebase telemetry pipeline; the split is what keeps an app that only wants the Apple provider from installing this package at all. Two different consents, both worth having.
+3. **The release-process tax is accepted.** It is the cost the single-package position was defending against, and it is real: two repositories, two CI pipelines, two version numbers and a peer-dependency range to keep honest, all on one maintainer. What makes it affordable is that the coupling is thin — this package depends on the main package's `core` contract and nothing else, and that contract is frozen by D1–D32 — and that a beta SDK on Google's ~6-week breaking-change rhythm is exactly the kind of dependency you want on its own release schedule anyway (the old T3, now moot; see below).
+
+What the split explicitly does **not** claim: that it makes the telemetry acceptable, or that a consumer who adds the Gradle line has been adequately warned by the act of installing a package. It makes the disclosure unavoidable for the developer. Whether the developer passes it on to their users is a duty Google places on them and that no packaging choice can discharge.
+
+### D6: The ios-wire-parity shims are removed — `supportsLocale`, `schemaJson`, `tools`, `toolCallTimeoutMs`
+
+Wave 1's Kotlin module carried four pieces of surface that existed for exactly one reason: one registered module name meant one TypeScript caller had to be able to drive either platform's native half, so the Android module had to answer every method and accept every argument the Swift one did.
+
+- `AsyncFunction("supportsLocale") { _: String -> true }` — a method whose only possible answer was `true`.
+- `generate(…, schemaJson: String?)` and `startStream(…, schemaJson: String?, tools: …, toolCallTimeoutMs: Int?)` — arguments accepted and then rejected, or accepted and ignored.
+
+D1 removed the constraint, so all four are gone, on both sides, consistently: the Kotlin `generate` and `startStream` now take `(requestId, messages, temperature?, maxOutputTokens?)`, `BridgeRequest.parse` takes three arguments, and `AndroidNativeModule` in `src/native/types.ts` describes exactly that.
+
+Three reasons, in order of weight:
+
+1. **The shim was already broken.** `AndroidNativeModule.generate` declared four parameters and the Kotlin `AsyncFunction` declared five; `startStream` declared four against seven. Expo validates argument counts, so **every request from the shipped TypeScript half would have been rejected by the bridge** on the first device that ran it — and no test could catch it, because the TypeScript tests run against a fake and the JVM tests never touch Expo. A parity shim that no caller exercises is not defence in depth; it is unreachable code drifting out of sync with the thing it claims to mirror. Removing it makes the two halves one shape that a reader can check by eye.
+2. **`supportsLocale` returning `true` unconditionally is worse than its absence.** A caller cannot distinguish "this locale is supported" from "I have no way to tell you" — and Android genuinely has no way: there is no locale enumeration API, and `genai-common`'s `SapiLanguage` is an empty marker annotation with no members (research §4). `capabilities().locales` reporting `UNKNOWN` says the true thing in the vocabulary the contract already has for it. (The wave-1 reasoning for returning `true` — that a pre-check should not block a request the model may well handle — survives intact and is now expressed by there being no pre-check to block it.)
+3. **The refusals did not need two homes.** `schema` and `tools` are still refused, as `invalidRequest`, by `rejectSchema`/`rejectTools` in `src/wire.ts` — before the bridge hop, with a message long enough to name the SDK limitation and suggest routing elsewhere, which is more than a native backstop could carry. The native gate only ever fired for a caller who bypassed the TypeScript half entirely, which for a private bridge is not a caller that exists.
+
+**What was deliberately kept.** The `reset` flag on `BridgeStreamEvent.Delta` looks like the same kind of shim and is not: it is the `StreamAccumulator` tripwire. The SDK's stream is delta-per-callback according to its bytecode, but if it is ever cumulative in practice, `reset` is how one request makes that visible without anything being rewritten (register item 4). Also kept, untouched: the `compileOnly` firewall and its reflection probe, the 21-code error table, the role encoding, the request registry, and the returned-not-thrown error convention, which is a good convention and not a parity concession.
+
+The three JVM tests that pinned the removed refusals are replaced by three that pin what the narrowed signature must still guarantee — including an arity test that reads as the one-line record of reason 1. The count stays at 60.
+
+---
+
+## 2026-09-23 — The Kotlin bridge (wave 1)
+
+**Everything in this section is written against an API surface read from the shipping `com.google.mlkit:genai-prompt:1.0.0-beta4` AARs with `javap` (`docs/research/android-genai.md`), and against nothing else. AICore is a preinstalled system service that exists on no AVD image, so there is no emulator, no CI path and no laptop dev loop (research §6).** What is proven is that the module *compiles* against the real artifacts and that its device-independent logic passes 60 JVM unit tests. Every assumption that only hardware can settle is marked PROVISIONAL at its site in the code and listed once in the register below.
+
+### D2 (was D33): `genai-prompt` is `compileOnly`; a missing dependency reports `unsupportedPlatform`
+
+The ML Kit GenAI SDK is compiled against and **never packaged**. At `compile` scope it drags in Play Services (`play-services-basement`, `-tasks`), `com.google.mlkit:common`, `genai-common`, `genai-schema`, three `datatransport` artifacts, two `firebase-encoders` artifacts, Guava's `listenablefuture` and three `kotlinx-coroutines` artifacts — a Play Services dependency plus a **Firebase datatransport telemetry pipeline**, landing in the APK of everyone who installs this package. Expo autolinking includes every `android/` module of every dependency unconditionally and offers no per-provider opt-out (research §9), so `compileOnly` is the only lever that makes the default cost zero. It is also the shape that survives §7's one unresolved legal question — whether a redistributable npm package may ship the SDK inside it, which could not be settled from the live ML Kit terms: consumer-supplied means we never redistribute it, so the question does not arise.
+
+*(Wave-1 note now partly superseded: this entry originally argued the firewall also protected "an app that only ever uses the Apple provider but ships an Android build". After D1 such an app does not install this package at all. The firewall's remaining job is the app that installs this package and has **not** opted in — and that is the job it was always doing; the split narrowed the population, not the argument.)*
+
+**Verified, not asserted.** The example app was built and all 20 dex files scanned: the only `com.google.mlkit` strings present are the *type references* inside our own `GenAiEngine` class. There is no ML Kit, Play Services, Firebase or datatransport **class** in the APK. (Re-verified against this repository's own example build.)
+
+**Runtime detection** is one guarded `Class.forName("com.google.mlkit.genai.prompt.Generation", initialize = false)` probe, memoised, catching `Throwable` (a partially resolved classpath throws `NoClassDefFoundError`, not `ClassNotFoundException`). Because a class that references an absent type fails when it is loaded, **every ML Kit reference is confined to `GenAiEngine.kt`**, which is instantiated by name through `MlKitPresence.createEngine()` so the module's own bytecode never mentions it. One ML Kit import in any other file turns a clean unavailable into a crash.
+
+**The missing-dependency reason is `unsupportedPlatform`, not `notEnabled`.** Argued from the two reasons' documented semantics in the contract's `availability.ts`:
+
+- `notEnabled` is "capable hardware, but **the user** has not turned the feature on". It is a statement about a device setting a user can change, and UI that branches on it says so. A missing Gradle dependency is a *developer build configuration* fact; no user can act on it, and an app showing a settings prompt would be telling the user something false. It would also break research §5's invariant that `notEnabled` has no Android analogue and this provider never returns it — a property the test suite asserts across every state the provider can produce.
+- `unsupportedPlatform`'s own docblock is explicit that it covers the case Apple's enum cannot express: **the framework is not there at all.** With a `compileOnly` dependency that is literally true. It is also permanent for the build in hand, which matches its non-retryable semantics, where `modelNotReady` would invite a caller to poll forever.
+
+What that loses is specificity — a developer sees the same code the TypeScript layer emits on web — and `detail` is exactly the documented channel for it ("a human-readable diagnostic for logs and dev UI... because 'modelNotReady' alone is not enough to debug a support ticket"), so the detail names the missing coordinate and the one line that fixes it.
+
+**Consumer opt-in** is one line in the app's own Android build: `implementation 'com.google.mlkit:genai-prompt:1.0.0-beta4'` in `android/app/build.gradle`. It works because the app and this module share one APK and one classloader. **No extra repository is needed** — `google()` already proxies `dl.google.com/android/maven2` in every Expo and RN template — so `expo-build-properties`' `extraMavenRepos` is not required, and could not have helped anyway: it adds repositories, never dependencies. For a CNG app where `android/` is regenerated, the durable form is a three-line local config plugin using `withAppBuildGradle`; the snippet is in `android/build.gradle` and in the README. **Shipping that plugin from this package remains out of scope**: it is the right home for the version pin, and the pin should be chosen after the hardware spike rather than guessed before it. The version is pinned and never a range — the API is beta, states verbatim that it may break backward compatibility, and has shipped four betas in eight months (research §11.4).
+
+**One toolchain wrinkle, recorded because it will recur.** `genai-prompt` is compiled with Kotlin 2.3.21, so its classes carry `@Metadata` version 2.3.0; Expo SDK 57 / RN 0.82 pins the Kotlin compiler at 2.1.0, which reads up to 2.2.0 and otherwise refuses the artifact outright. `-Xskip-metadata-version-check` is applied **to this module's compile tasks only** — it cannot affect the app or any other Expo module, and it is only ever applied to reading a dependency we do not ship. The alternative was forcing a newer Kotlin on the whole consumer build, which is not a decision a library gets to make for its host. PROVISIONAL: the flag makes the compiler read newer metadata rather than verify it, so a genuinely incompatible declaration shape would surface at runtime instead of at compile time. Drop it as soon as the toolchain's Kotlin catches up.
+
+`expo-module.config.json` declares `expo.modules.ondevicellmandroid.OnDeviceLlmAndroidModule` under `android.modules`, and `platforms` is `["android"]` alone — there is no iOS half of this package to declare.
+
+### D3 (was D34): `DOWNLOADABLE` reports `modelNotReady`; `availability()` never starts a download
+
+`FeatureStatus` has four states and they map onto three of our reasons: `AVAILABLE` → available, `DOWNLOADING` and `DOWNLOADABLE` → `modelNotReady`, `UNAVAILABLE` → `deviceNotEligible`. `checkStatus()` returns a bare `Int`, so an unrecognised value — a fifth state in beta5 is entirely plausible — degrades to `modelNotReady` with the raw number in `detail`: of the reasons available it is the only recoverable one, so a caller re-checks instead of permanently writing the device off.
+
+The real decision is `DOWNLOADABLE`, where `Flow<DownloadStatus> download()` is right there and triggering it is tempting. It is not triggered, for three reasons:
+
+1. **`availability()` is a question, not a command.** The router calls it on every route decision (behind the contract's 5-second TTL cache) and `useAvailability` calls it on mount. Starting a multi-hundred-megabyte, possibly metered download as a side effect of *asking* is the kind of surprise a library must never spring, and the caller never consented because they believe they asked a question.
+2. **There is nowhere to report progress.** `Availability` is `{ available, reason?, detail? }`. Research §11.2 records models stuck downloading indefinitely with nothing reported to the app, so a download we started but cannot describe is a plausible permanent hang that the caller cannot even see.
+3. **`modelNotReady` already says the true thing** and flips to `available` on its own once assets land.
+
+Triggering a download belongs in an explicit, caller-initiated API with a progress channel. That is a later addition and is deliberately not invented here. The `detail` string says "availability() deliberately does not start the download", and a test asserts it, so the behaviour is discoverable rather than surprising.
+
+A `checkStatus()` that *throws* is handled separately and never reports available: when the error table already judged the failure to be an `unavailable` (`AICORE_INCOMPATIBLE`, `NEEDS_SYSTEM_UPDATE`, `NOT_AVAILABLE`, `NOT_ENOUGH_DISK_SPACE`) that reason is reused verbatim; anything else becomes `modelNotReady`, because a failure to *ask* is not an answer.
+
+### D4 (was D35): Role encoding — `User:` / `Model:` per `Content`, single-turn unframed (PROVISIONAL)
+
+**`Content` has no role field.** `javap -p` finds exactly one private field on it (a `List`), and the strings `role`, `user`, `model` and `assistant` appear **nowhere** in the 1,473 classes of `genai-prompt` (research §1). `GenerateContentRequest.contents` is a positional `List<Content>` whose turn-attribution contract is undocumented, and every published Google sample is single-turn. So unlike Apple's typed `Transcript` entries, multi-turn can only be expressed by **inventing a textual frame**. This is a guess until hardware says otherwise.
+
+The encoding, implemented as pure string transformation in `core/PromptEncoding.kt` so the engine only wraps its output in SDK objects:
+
+- **System messages** → concatenated in original order (blanks dropped), into `SystemInstruction` when `isSystemPromptAvailable()` says the resident model honours it. Relative order among them is preserved, their position *between* turns is not — the same trade the Apple provider makes, for the same reason: there is one system slot. The probe is cached per process; a probe that *fails* is cached as `false`, the safe direction, because folding always delivers the instructions where trusting an unverified `true` could drop them.
+- **When system prompts are unsupported**, the text is **folded into the first content** as `System: …` followed by a blank line. Dropping the caller's instructions is the one outcome that must never happen; giving them their own `Content` would spend a turn slot on something that is not a turn.
+- **Each user/assistant message becomes one `Content`** holding one `TextPart`, framed as `User: …` / `Model: …`.
+- **A lone user message with no system text is emitted bare**, byte for byte the shape of every documented Google sample — the only shape with any evidence behind it. The invented frame is confined to the case that actually needs it, and `EncodedPrompt.framed` reports which happened so the spike can A/B both on one device.
+- **A request must end with a user message**, rejected as `invalidRequest` otherwise, because there is no "continue your own last message" affordance here. ML Kit has no prompt/transcript split, so there is nothing to hold back — the rule transfers even though its mechanism does not. `requirePrompt = false` relaxes it for `prewarm` and `countTokens`.
+
+**Why `User:` / `Model:` and not sentinels or tags.** Special sentinels (`<|im_start|>user`) only help if they match the tokenizer's actual control tokens; guess wrong and they are ordinary text that wastes tokens and adds noise — and we cannot check, because the artifact carries no hint and there is no device. Plain labelled lines are the commonest conversational shape in ordinary pretraining text, so a model that ignores the frame entirely still reads something coherent, which is the failure mode to optimise for when the frame is unverifiable. `Model` rather than `Assistant` because the surrounding stack is Gemini and the Gemini API's own two roles are `user` and `model`.
+
+The whole frame is four constants in `RoleFrame`, pinned character for character by a test, so the spike changes one place and sees exactly what moved. Note the honest caveat this puts on token counting: `countTokens` is *exact for the request we actually build*, frame included — change the frame and the number changes.
+
+### D5 (was D36): The 21-code error table, and the guardrail asymmetry
+
+`GenAiException` is the one exception type and is richer than Apple's: `getErrorCode(): Int` plus `getRetryDelay(): Duration`. All 21 codes are mapped (`core/ErrorMapping.kt`), with the numbers living **only in the SDK** — the pure table is keyed by a symbolic enum and `GenAiEngine` does the int → enum translation using `GenAiException.ErrorCode.*`, so a constant renamed in a future beta is a compile error rather than a silent mismapping.
+
+| → | codes |
+| --- | --- |
+| `cancelled` | `CANCELLED` |
+| `contextOverflow` | `REQUEST_TOO_LARGE`, `STRUCTURED_OUTPUT_MAX_TOKENS_ERROR` |
+| `unavailable` | `NOT_AVAILABLE`, `NOT_ENOUGH_DISK_SPACE` (`modelNotReady`), `AICORE_INCOMPATIBLE` (`deviceNotEligible`), `NEEDS_SYSTEM_UPDATE` (`unsupportedPlatform`) |
+| `rateLimited` + `resetDate` | `BUSY`, `PER_APP_BATTERY_USE_QUOTA_EXCEEDED` |
+| `invalidRequest` | `REQUEST_TOO_SMALL`, `NOT_SUPPORTED`, `INVALID_INPUT_IMAGE`, `STRUCTURED_OUTPUT_REQUEST_ERROR` |
+| `unknown` + `transient: true` | `BACKGROUND_USE_BLOCKED`, `REQUEST_PROCESSING_ERROR`, `RESPONSE_PROCESSING_ERROR`, `RESPONSE_GENERATION_ERROR`, `CACHE_PROCESSING_ERROR`, `STRUCTURED_OUTPUT_RESPONSE_ERROR`, `AUDIO_BUFFER_OVERFLOW` |
+| `unknown`, `transient` unset | `UNKNOWN` |
+| `unknown` + `transient: true`, raw int in `nativeCode` | any code this build does not recognise |
+
+Four rows earn their reasons:
+
+- **`getRetryDelay()` → `resetDate`.** Apple's `RateLimited.resetDate` has a direct counterpart, so `RateLimitedErrorDetails.resetDate` is populatable on both platforms — and the router makes `rateLimited` a fallback trigger, so the number is load-bearing. The SDK reports a *relative* `Duration`; it is converted to absolute epoch milliseconds against the clock at mapping time. `BUSY` and `PER_APP_BATTERY_USE_QUOTA_EXCEEDED` are Android-only failure modes with no iOS analogue (research §11.6): a long chat can be throttled by the OS mid-conversation, and `getRetryDelay()` is what makes that survivable.
+- **The transient-unknown lane carries the bulk.** `REQUEST_PROCESSING_ERROR`, `RESPONSE_PROCESSING_ERROR`, `RESPONSE_GENERATION_ERROR` and `CACHE_PROCESSING_ERROR` are the documented shape of *inference failed on healthy, eligible hardware* — AICore's own `2-INFERENCE_ERROR` / `29-INTERNAL_ERROR` surfaces, and `googlesamples/mlkit#985` reporting `Feature not available` crashes on real AICore-equipped Pixels (research §11.1). The SDK's own bytecode carries the string *"Inference failed with prefix cache, retry without cache"*: Google treats first-attempt failure as expected. The contract's transient lane is not optional on Android; it is load-bearing from day one, and `unknownTransient` (on by default in the router) is what lets it act on it.
+- **`UNKNOWN` leaves `transient` unset** rather than guessing `true`: "don't know" shares the non-retryable switch, because treating every mystery as retryable makes each one cost two generations and two bills. A failure we have *classified* as transient is a different statement from the SDK's own shrug.
+- **A raw, unclassified `Throwable` → `unknown` + `transient: true`** with class name and message attached: a `NoClassDefFoundError` from a half-present classpath, an `IllegalStateException` from ML Kit's internals. Unclassifiable, but never unreportable and never fatal. The cause chain is walked (bounded at 8) because ML Kit's coroutine adapters rethrow wrapped.
+
+**The guardrail asymmetry.** There is **no `guardrail` code on Android and there cannot be one.** No member of `ErrorCode` denotes a safety refusal; safety is implemented as *prompt text* — the internal `zzys` adapter appends the literal string *"Do NOT generate unsafe content"* to the system instruction (research §3/§5) — so a blocked response most likely arrives as ordinary generated text, or at worst as `RESPONSE_GENERATION_ERROR` which we map to the transient lane. The consequence is a genuine cross-platform behaviour difference: **the router makes `guardrail` the one code that does not fall through to a cloud provider by default, precisely so content the on-device model refused is not quietly re-sent elsewhere — and on Android that policy is unenforceable**, because the refusal never reaches the taxonomy. An app relying on it behaves differently per platform. Nothing in the mapping can fix this; a test asserts that no code ever maps to `guardrail`, so the absence stays deliberate rather than becoming an oversight, and the README says so under Privacy & terms.
+
+Two smaller consequences of the same audit: `unsupportedLocale` is also unreachable (no locale error, no enumeration API — `SapiLanguage` is an empty marker annotation), so the router's `unsupportedLocale` trigger and the contract's locale pre-check are both inert on Android; and `network` is unreachable because nothing here talks to one.
+
+---
+
+## PROVISIONAL register
+
+Every item below is unverifiable without an allowlisted device (Pixel 9/10/11 is the cheapest nano-v3/v4 route). Each is marked at its site in the code with the same wording. Until they are answered, this package is experimental and its README says so above the fold.
+
+1. **Does the role encoding work at all, and is `User:` / `Model:` the right frame?** (D4, `core/PromptEncoding.kt`.) Also: does the unframed single-turn shape measurably beat the framed one, and does the model ever echo the frame back into its output?
+2. **Does `SystemInstruction` change behaviour, and what does `isSystemPromptAvailable()` actually return** on the device in hand? The fold-into-first-content path (D4) has never run.
+3. **Does cancelling the coroutine `Job` stop AICore inference, or only delivery?** (`core/RequestRegistry.kt`.) Our contract requires the former. `ErrorCode.CANCELLED` existing is encouraging but is inference, not evidence.
+4. **Is `generateContent(request, StreamingCallback)` really delta-per-callback end to end, and at what granularity** — token, word, sentence, or one chunk for the whole response? (`core/StreamAccumulator.kt`.) The delta finding is static, read from bytecode. The tripwire flags a cumulative stream as `reset` on the wire without rewriting anything, so a wrong assumption is visible in one request. (This is why D6 kept `reset` while removing the other parity-shaped surface.)
+5. **What does `getTokenLimit()` actually return**, and does it move between devices or model variants? The docs' ~4,096 is uncorroborated by any per-variant figure (research §4).
+6. **What does `getBaseModelName()` return**, and does `checkStatus()` ever return a value outside the four known states?
+7. **Does `warmup()` measurably help**, and does calling it on a `DOWNLOADABLE` device trigger a download (which would make D3's no-side-effects promise false for `prewarm` too)?
+8. **Is `countTokens(request)` consistent with what generation actually consumes**, frame included?
+9. **Do the error codes arrive as the table expects** — in particular, does a safety refusal really come back as plain text (D5), and is `getRetryDelay()` ever populated in practice?
+10. **Does `-Xskip-metadata-version-check` hold at runtime**, i.e. does every SDK call actually dispatch correctly (D2)?
+11. **Does the `compileOnly` arrangement work on a device** once the consumer adds the `implementation` line — the probe passing, the engine loading, and no `NoClassDefFoundError` from any other class. **Include a RELEASE build with R8/minification enabled**: shrinking can strip or rename the classes the reflection probe and the engine depend on, and any keep-rules a consumer needs are ours to discover and document, not theirs.
+12. **Does the renamed registration resolve** — `requireNativeModule('OnDeviceLlmAndroid')` finding the module on a real build, with both packages installed and the main package's `OnDeviceLlm` present alongside it. New with D1: the rename is the one thing in this package that no existing test or build covers, because autolinking and Expo's module registry only exist at runtime on a device.
+
+---
+
+## Tripwires — what wave 2 still owes
+
+The main package's register closed wave 1 with three findings that would force the single-package position to flip. D1 flipped it first, on a different argument, which changes what the three are *for* but not whether they need answering.
+
+- **T1 — firewall fragility.** If register item 11 fails, or works only with consumer keep-rules fragile enough that someone plausibly ships Google's SDK without informed intent, the consent boundary is untrustworthy. **Still open, and still a wave-2 question.** The split did not settle it: the firewall is what protects a consumer who installed this package and has not opted in, and if R8 can defeat it then the Gradle line stops being a meaningful act of consent. If that happens the remedy is no longer "split the package" — it is keep-rules this package documents, or a config plugin it ships.
+- **T2 — toolchain hostage-taking.** If `-Xskip-metadata-version-check` (item 10) breaks, or tracking the beta SDK starts constraining the Kotlin/AGP/Expo versions supportable here, that is a real constraint. **Still open, and still a wave-2 question** — though the split already removed its worst consequence: this package can no longer hold the Apple side's upgrade path hostage, because they no longer share a build. What remains is whether *this* package can track Expo at all, which is a question about this package's own viability.
+- **T3 — cadence mismatch.** **Moot by the split.** The concern was that the beta's ~6-week breaking-change rhythm would force releases on Google's schedule while the Apple side was stable, making Apple-only consumers eat meaningless version churn. Separate versioning is the fix, and separate versioning is now the arrangement. Recorded rather than deleted because it was one of the three things wave 2 was told to answer, and "you no longer need to" is an answer.

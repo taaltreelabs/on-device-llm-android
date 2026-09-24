@@ -1,0 +1,157 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Build, typecheck, lint (incl. the no-react rule) and the 73 TypeScript unit
+  # tests. The tests run against a scriptable fake of the native bridge, which is
+  # the only thing any runner can verify: AICore is a preinstalled system service
+  # present on no emulator image (docs/research/android-genai.md §6), so nothing
+  # in CI ever speaks to a model. DECISIONS.md's PROVISIONAL register is the list
+  # of what CI therefore cannot cover.
+  checks:
+    name: typecheck, lint, unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        # `@taaltreelabs/on-device-llm` is a git devDependency whose own "prepare"
+        # script compiles its `build/` on install — which is what makes the
+        # `@taaltreelabs/on-device-llm/core` subpath export resolvable here. If
+        # that ever stops happening the failure is a loud "cannot find module" in
+        # the typecheck step, not a silent fallback.
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint (includes the no-react rule)
+        run: npm run lint
+
+      - name: Unit tests
+        # `test:ci` raises the per-test timeout and allows one retry, for the
+        # timing-sensitive stream-bridge tests under CI CPU contention. Local
+        # `npm test` is untouched.
+        run: npm run test:ci
+
+  # Verifies the published tarball: compiled JS + declarations, android/src/main,
+  # expo-module.config.json, README.md (which carries the Privacy & terms section
+  # that is the reason this package exists — see DECISIONS.md D1) and LICENSE;
+  # and asserts android/src/test, example/, docs/, src/, scripts/, .github/ and
+  # every test file are absent. See scripts/check-pack.mjs for the assertions.
+  pack:
+    name: verify published tarball contents
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        # `npm ci` runs "prepare", which builds `build/` fresh; check:pack's
+        # `npm pack --dry-run` runs it again before packing, so no separate build
+        # step is needed.
+        run: npm ci
+
+      - name: check:pack
+        run: npm run check:pack
+
+  # The Kotlin half: compiled against the real genai-prompt artifacts, plus its 60
+  # JVM unit tests. The example app is the Gradle host — example/android is
+  # gitignored prebuild output, so this job runs `expo prebuild` itself rather
+  # than checking anything out.
+  #
+  # `testDebugUnitTest` is the substantive half of this job. It covers
+  # android/src/main/.../core/ — the availability table, the 21-code error table,
+  # the role encoding, the request registry and the stream accumulator — which is
+  # deliberately every part of the module that does not touch the SDK, because
+  # that is the only part a runner can verify at all.
+  example-android:
+    name: example app Android build + JVM unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # The ubuntu runner image ships a full Android SDK at
+      # /usr/local/lib/android/sdk (ANDROID_HOME preset). The
+      # android-actions/setup-android action is deliberately NOT used: its default
+      # package list still requests the long-removed legacy 'tools' package, which
+      # fails sdkmanager outright (observed on the main package's first CI run).
+      # Gradle installs any missing platform/build-tools itself once the licenses
+      # are accepted.
+      - name: Accept Android SDK licenses
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Build package
+        run: npm run build
+
+      - name: Install example dependencies
+        working-directory: example
+        run: npm ci
+
+      - name: Prebuild Android native project
+        # Regenerates the gitignored example/android/ from app.json. Also writes
+        # local.properties from ANDROID_HOME, so no manual sdk.dir step is needed
+        # here the way it is for a local checkout.
+        working-directory: example
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('example/android/**/*.gradle*', 'example/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: JVM unit tests (60)
+        working-directory: example/android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :taaltreelabs-on-device-llm-android:testDebugUnitTest
+
+      - name: assembleDebug
+        working-directory: example/android
+        run: ./gradlew assembleDebug
+
+      - name: Upload JVM test report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jvm-test-report
+          path: android/build/reports/tests/testDebugUnitTest
+          if-no-files-found: ignore
