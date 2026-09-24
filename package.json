@@ -1,0 +1,68 @@
+{
+  "name": "@taaltreelabs/on-device-llm-android",
+  "version": "0.1.0",
+  "description": "Android on-device LLM provider (ML Kit GenAI / AICore) for @taaltreelabs/on-device-llm",
+  "main": "./build/index.js",
+  "types": "./build/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./build/index.d.ts",
+      "default": "./build/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "build",
+    "android",
+    "!android/build",
+    "!android/src/test",
+    "expo-module.config.json"
+  ],
+  "scripts": {
+    "build": "node internal/module_scripts/build.js",
+    "clean": "node internal/module_scripts/clean.js",
+    "lint": "eslint src/ scripts/",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ci": "vitest run --testTimeout=15000 --retry=1",
+    "typecheck": "tsc --noEmit",
+    "check:pack": "node scripts/check-pack.mjs",
+    "prepare": "node internal/module_scripts/prepare.js",
+    "open:android": "node internal/module_scripts/open-android.js"
+  },
+  "keywords": [
+    "react-native",
+    "expo",
+    "android",
+    "on-device-llm",
+    "mlkit",
+    "genai",
+    "aicore",
+    "gemini-nano",
+    "llm"
+  ],
+  "repository": "https://github.com/taaltreelabs/on-device-llm-android",
+  "bugs": {
+    "url": "https://github.com/taaltreelabs/on-device-llm-android/issues"
+  },
+  "author": "TaalTree Labs <charles.juszczak@gmail.com> (https://github.com/taaltreelabs)",
+  "license": "MIT",
+  "homepage": "https://github.com/taaltreelabs/on-device-llm-android#readme",
+  "dependencies": {},
+  "peerDependencies": {
+    "@taaltreelabs/on-device-llm": "^0.1.0",
+    "expo": "*",
+    "react-native": "*"
+  },
+  "devDependencies": {
+    "@taaltreelabs/on-device-llm": "github:taaltreelabs/on-device-llm",
+    "@types/react": "~19.1.1",
+    "eslint": "~9.39.4",
+    "eslint-config-universe": "^15.0.3",
+    "expo": "^57.0.23",
+    "prettier": "^3.0.0",
+    "react-native": "0.82.1",
+    "typescript": "^5.9.2",
+    "vitest": "^5.0.0"
+  }
+}

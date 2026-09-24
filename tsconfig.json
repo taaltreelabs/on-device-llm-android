@@ -1,0 +1,50 @@
+{
+  "compilerOptions": {
+    "lib": ["dom", "DOM.Iterable", "esnext"],
+    "typeRoots": ["./ts-declarations", "./node_modules/@types"],
+    "jsx": "react-native",
+    "target": "esnext",
+    // CommonJS (not "bundler"/"esnext") so the compiled `build/` output is
+    // directly loadable by plain Node with no bundler in front of it — the same
+    // choice the main package makes, and what lets a Node test runner import
+    // this package's build output unchanged.
+    "moduleResolution": "node",
+    "module": "commonjs",
+    // `moduleResolution: "node"` is TypeScript's node10 algorithm, which
+    // predates and therefore ignores the `exports` field of package.json. The
+    // peer package `@taaltreelabs/on-device-llm` publishes its `core` contract
+    // only as the `./core` subpath export (there is no `core/` directory in the
+    // tarball), so tsc cannot find its types without being told where they are.
+    //
+    // This mapping is for the *compiler only*. Every runtime that actually loads
+    // this package resolves the subpath properly through the exports map: Node
+    // natively, Metro since React Native 0.79 (package exports on by default),
+    // and Vite/Vitest through its own node resolver — which is why there is no
+    // matching alias in vitest.config.mts.
+    //
+    // Revisit if this package ever moves to `module: "node16"`/`"nodenext"`,
+    // whose resolver reads `exports` and makes the mapping redundant.
+    "paths": {
+      "@taaltreelabs/on-device-llm/core": [
+        "./node_modules/@taaltreelabs/on-device-llm/build/core/index.d.ts"
+      ]
+    },
+    "moduleDetection": "force",
+    "esModuleInterop": true,
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "inlineSources": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": false,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": false,
+    "rootDir": "./src",
+    "outDir": "./build"
+  },
+  "include": ["./src"],
+  "exclude": ["**/__mocks__/*", "**/__tests__/*"]
+}

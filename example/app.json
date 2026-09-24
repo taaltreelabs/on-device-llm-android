@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "on-device-llm-android-example",
+    "slug": "on-device-llm-android-example",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "expo.modules.ondevicellmandroid.example"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
