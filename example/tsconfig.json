@@ -1,0 +1,13 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@taaltreelabs/on-device-llm-android": ["../src/index"],
+      "@taaltreelabs/on-device-llm-android/*": ["../src/*"],
+      "@taaltreelabs/on-device-llm/core": [
+        "../node_modules/@taaltreelabs/on-device-llm/build/core/index.d.ts"
+      ]
+    }
+  }
+}
