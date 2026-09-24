@@ -150,6 +150,24 @@ for (const p of ['README.md', 'LICENSE']) {
   if (!fileSet.has(p)) fail(`missing required file: ${p}`);
 }
 
+// ---- present: the Expo config plugin ----------------------------------------
+//
+// `app.plugin.js` at the package root is how Expo *finds* a package's config
+// plugin — it is checked before `main` — so its absence would silently break
+// every `"plugins": ["@taaltreelabs/on-device-llm-android"]` consumer even
+// though `require('@taaltreelabs/on-device-llm-android')` still works fine.
+// `plugin/gradle-transforms.js` is the pure transform module the plugin (and
+// its vitest tests) both depend on; without it the plugin throws at prebuild
+// time for every consumer, immediately.
+
+for (const p of [
+  'app.plugin.js',
+  'plugin/withOnDeviceLlmAndroid.js',
+  'plugin/gradle-transforms.js',
+]) {
+  if (!fileSet.has(p)) fail(`missing required file: ${p} (the Expo config plugin)`);
+}
+
 // ---- absent: the JVM test source set ---------------------------------------
 
 for (const f of files) {
