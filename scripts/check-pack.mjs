@@ -107,6 +107,18 @@ if (!fileSet.has('android/build.gradle')) {
 if (!fileSet.has('android/src/main/AndroidManifest.xml')) {
   fail('missing required file: android/src/main/AndroidManifest.xml');
 }
+// The R8 keep rules are load-bearing, not housekeeping (tripwire T1). Without
+// them in the tarball, a consumer's MINIFIED release build shrinks `GenAiEngine`
+// away and renames `Generation`, both of which the firewall reaches only by
+// name — so the provider reports `unsupportedPlatform` on perfectly capable
+// hardware, silently and permanently. A packaging change that dropped this file
+// would be invisible in every debug build and in all 60 JVM tests.
+if (!fileSet.has('android/consumer-rules.pro')) {
+  fail(
+    'missing required file: android/consumer-rules.pro (the R8 keep rules that keep the ' +
+      'reflection-based firewall alive in a consumer release build — see tripwire T1)'
+  );
+}
 
 const KOTLIN_PREFIX = 'android/src/main/java/expo/modules/ondevicellmandroid/';
 const REQUIRED_KOTLIN = [

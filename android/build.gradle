@@ -107,6 +107,15 @@ android {
   defaultConfig {
     versionCode 1
     versionName "0.1.0"
+
+    // TRIPWIRE T1. The firewall (D2) is two `Class.forName` lookups by name,
+    // and R8 can see neither: `GenAiEngine` is referenced by no bytecode at
+    // all, so a minified consumer build shrinks it away and the provider
+    // reports `unsupportedPlatform` on capable hardware — a silent, permanent
+    // wrong answer. The rules ship WITH the library so no consumer has to
+    // discover them. See consumer-rules.pro for the full reasoning, and the
+    // wave-2 spike's Spike11Firewall for the on-device verification.
+    consumerProguardFiles 'consumer-rules.pro'
   }
   lintOptions {
     abortOnError false
