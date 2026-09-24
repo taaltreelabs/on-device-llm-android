@@ -1,0 +1,147 @@
+// ============================================================================
+//  THE DEPENDENCY FIREWALL — DECISIONS.md D33
+// ============================================================================
+//
+//  `com.google.mlkit:genai-prompt` is declared `compileOnly`. This module is
+//  COMPILED against it and SHIPS NONE OF IT.
+//
+//  Why that matters, from docs/research/android-genai.md §9: at `compile`
+//  scope the artifact drags in, transitively,
+//
+//      com.google.android.gms:play-services-basement:18.9.0
+//      com.google.android.gms:play-services-tasks:18.2.0
+//      com.google.mlkit:common:18.11.0
+//      com.google.mlkit:genai-common:1.0.0-beta4
+//      com.google.mlkit:genai-schema:1.0.0-alpha1
+//      com.google.android.datatransport:transport-api / -backend-cct / -runtime
+//      com.google.firebase:firebase-encoders(+-json)
+//      com.google.guava:listenablefuture
+//      org.jetbrains.kotlinx:kotlinx-coroutines-core (+ -guava, -reactive)
+//
+//  — that is Play Services plus a Firebase datatransport telemetry pipeline,
+//  landing in the APK of anyone who installs this package, INCLUDING an app
+//  that only ever uses the Apple provider but ships an Android build. Expo
+//  autolinking includes every `android/` module of every dependency
+//  unconditionally; there is no per-provider opt-out at the autolinking layer.
+//  `compileOnly` is the only lever that makes the default cost zero.
+//
+//  It is also the shape that survives the one unresolved legal question (§7):
+//  whether a redistributable npm package may ship the SDK inside it could not
+//  be settled from the live ML Kit terms. Consumer-supplied means we never
+//  redistribute it, so the question does not arise for us.
+//
+//  At runtime the module detects presence with a single guarded
+//  `Class.forName` probe (`MlKitPresence.kt`). Absent means `availability()`
+//  reports `unsupportedPlatform` with a `detail` naming the exact remedy; the
+//  module still loads and every method still answers. Every ML Kit reference
+//  lives in `GenAiEngine.kt`, which is reached by name, only after the probe.
+//
+// ----------------------------------------------------------------------------
+//  CONSUMER OPT-IN — how an app turns the Android provider on
+// ----------------------------------------------------------------------------
+//
+//  ONE LINE, in the app's own Android build:
+//
+//      // android/app/build.gradle
+//      dependencies {
+//        implementation 'com.google.mlkit:genai-prompt:1.0.0-beta4'
+//      }
+//
+//  No extra repository is needed: `google()` (which proxies
+//  dl.google.com/android/maven2) is already in `allprojects.repositories` of
+//  every Expo and React Native Android template, and that is where the artifact
+//  lives. So `expo-build-properties`' `extraMavenRepos` is NOT required here —
+//  and it could not help anyway: that option adds repositories, never
+//  dependencies.
+//
+//  It works because the app and this module share one APK and one classloader:
+//  an `implementation` in the app module puts the classes on the runtime
+//  classpath that our `compileOnly`-compiled references resolve against.
+//
+//  For a CNG / prebuild app, where `android/` is regenerated, the durable form
+//  of the same line is a three-line local config plugin:
+//
+//      // plugins/with-mlkit-genai.js
+//      const { withAppBuildGradle } = require('expo/config-plugins');
+//      module.exports = (config) => withAppBuildGradle(config, (c) => {
+//        c.modResults.contents = c.modResults.contents.replace(
+//          /dependencies\s?{/,
+//          "dependencies {\n    implementation 'com.google.mlkit:genai-prompt:1.0.0-beta4'"
+//        );
+//        return c;
+//      });
+//
+//  …referenced from `app.json`'s `plugins` array. Shipping that plugin from
+//  this package is deliberately OUT of scope for wave 1: it is the right home
+//  for the version pin and the eligibility docs, and it should be written once
+//  the hardware spike has confirmed which version to pin (the API is beta with
+//  an explicit no-backward-compatibility promise and has shipped four betas in
+//  eight months — §11.4 — so a floating range would be reckless and a pin made
+//  before the spike would be a guess).
+//
+//  Consumers must also be told, loudly, what adding that line means (§7): ML
+//  Kit sends usage and performance metrics to Google, so "on-device" does not
+//  imply "no data leaves the device" the way it does on Apple; the terms carry
+//  an 18+ age gate and a medical-use exclusion; and the device list is an
+//  allowlist, not a hardware specification.
+//
+// ============================================================================
+
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.ondevicellmandroid'
+version = '0.1.0'
+
+// Pinned, never a range. The Prompt API is beta and states verbatim that
+// "changes may be made to this API that break backward compatibility"; five
+// prereleases have shipped and there is no GA (docs/research/android-genai.md
+// §0/§1). Keep this in step with the coordinate in the comment block above,
+// with AvailabilityMapping.DEPENDENCY_COORDINATE, and with the README.
+ext.mlKitGenAiPromptVersion = '1.0.0-beta4'
+
+android {
+  namespace "expo.modules.ondevicellmandroid"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+  lintOptions {
+    abortOnError false
+  }
+  testOptions {
+    unitTests.returnDefaultValues = true
+  }
+}
+
+// `genai-prompt` 1.0.0-beta4 is compiled with Kotlin 2.3.21, so its classes
+// carry @Metadata version 2.3.0. Expo SDK 57 / RN 0.82 pins the Kotlin compiler
+// at 2.1.0, which reads metadata up to 2.2.0 and otherwise refuses the artifact
+// outright ("was compiled with an incompatible version of Kotlin").
+//
+// The flag is scoped to THIS module — it cannot affect the app or any other
+// Expo module — and it is only ever applied to reading a dependency we do not
+// ship. The alternative is to force a newer Kotlin on the whole consumer build,
+// which is not a decision a library gets to make for its host.
+//
+// PROVISIONAL: the flag makes the compiler read newer metadata rather than
+// verify it, so a genuinely incompatible declaration shape would surface as a
+// runtime failure instead of a compile error. Re-check at every SDK bump, and
+// drop the flag as soon as the toolchain's Kotlin is >= the artifact's.
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+  compilerOptions {
+    freeCompilerArgs.add('-Xskip-metadata-version-check')
+  }
+}
+
+dependencies {
+  // COMPILE ONLY. Nothing from this coordinate is packaged. See the block above.
+  compileOnly "com.google.mlkit:genai-prompt:${project.ext.mlKitGenAiPromptVersion}"
+
+  // JVM unit tests for `core/` — the only layer that can be verified without a
+  // device, because AICore runs on no emulator (§6). Run with:
+  //   cd example/android && ./gradlew :taaltreelabs-on-device-llm-android:testDebugUnitTest
+  testImplementation 'junit:junit:4.13.2'
+}
