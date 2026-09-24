@@ -107,6 +107,18 @@ if (!fileSet.has('android/build.gradle')) {
 if (!fileSet.has('android/src/main/AndroidManifest.xml')) {
   fail('missing required file: android/src/main/AndroidManifest.xml');
 }
+// The R8 keep rules are load-bearing, not housekeeping (tripwire T1). Without
+// them in the tarball, a consumer's MINIFIED release build shrinks `GenAiEngine`
+// away and renames `Generation`, both of which the firewall reaches only by
+// name — so the provider reports `unsupportedPlatform` on perfectly capable
+// hardware, silently and permanently. A packaging change that dropped this file
+// would be invisible in every debug build and in all 60 JVM tests.
+if (!fileSet.has('android/consumer-rules.pro')) {
+  fail(
+    'missing required file: android/consumer-rules.pro (the R8 keep rules that keep the ' +
+      'reflection-based firewall alive in a consumer release build — see tripwire T1)'
+  );
+}
 
 const KOTLIN_PREFIX = 'android/src/main/java/expo/modules/ondevicellmandroid/';
 const REQUIRED_KOTLIN = [
@@ -136,6 +148,24 @@ for (const name of REQUIRED_KOTLIN) {
 
 for (const p of ['README.md', 'LICENSE']) {
   if (!fileSet.has(p)) fail(`missing required file: ${p}`);
+}
+
+// ---- present: the Expo config plugin ----------------------------------------
+//
+// `app.plugin.js` at the package root is how Expo *finds* a package's config
+// plugin — it is checked before `main` — so its absence would silently break
+// every `"plugins": ["@taaltreelabs/on-device-llm-android"]` consumer even
+// though `require('@taaltreelabs/on-device-llm-android')` still works fine.
+// `plugin/gradle-transforms.js` is the pure transform module the plugin (and
+// its vitest tests) both depend on; without it the plugin throws at prebuild
+// time for every consumer, immediately.
+
+for (const p of [
+  'app.plugin.js',
+  'plugin/withOnDeviceLlmAndroid.js',
+  'plugin/gradle-transforms.js',
+]) {
+  if (!fileSet.has(p)) fail(`missing required file: ${p} (the Expo config plugin)`);
 }
 
 // ---- absent: the JVM test source set ---------------------------------------

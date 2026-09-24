@@ -6,6 +6,9 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "plugins": [
+      "./plugins/with-spike-harness.js"
+    ],
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",

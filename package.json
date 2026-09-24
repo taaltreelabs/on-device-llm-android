@@ -16,7 +16,10 @@
     "android",
     "!android/build",
     "!android/src/test",
-    "expo-module.config.json"
+    "expo-module.config.json",
+    "app.plugin.js",
+    "plugin",
+    "!plugin/__tests__"
   ],
   "scripts": {
     "build": "node internal/module_scripts/build.js",

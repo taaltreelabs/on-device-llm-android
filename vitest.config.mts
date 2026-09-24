@@ -14,7 +14,12 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['src/**/__tests__/**/*.test.ts'],
+    // `plugin/**` is the Expo config plugin (plain CommonJS, no build step —
+    // see plugin/withOnDeviceLlmAndroid.js) and its tests are plain content-
+    // transform tests with no Expo project involved, so they run through the
+    // same vitest config as the rest of the package rather than a separate
+    // toolchain.
+    include: ['src/**/__tests__/**/*.test.ts', 'plugin/**/__tests__/**/*.test.js'],
     exclude: ['node_modules', 'build', 'example'],
   },
 });
