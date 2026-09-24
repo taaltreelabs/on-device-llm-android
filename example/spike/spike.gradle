@@ -1,0 +1,172 @@
+// ============================================================================
+//  spike.gradle — wave-2 hardware spike harness, applied to the example app
+// ============================================================================
+//
+//  Applied from the generated `android/app/build.gradle` by
+//  `plugins/with-spike-harness.js`. Lives here, outside the generated tree, so
+//  `expo prebuild --clean` cannot delete it.
+//
+//  Four jobs:
+//
+//   1. THE CONSUMER OPT-IN (DECISIONS.md D2). One `implementation` line for
+//      `com.google.mlkit:genai-prompt`. The library declares the same
+//      coordinate `compileOnly` and ships none of it; this is the app — the
+//      consumer — supplying it. The spike is therefore the first end-to-end
+//      exercise of the firewall in the shape a real consumer uses.
+//
+//   2. THE ANDROIDTEST SUITE. Sources live in `example/spike/src/androidTest`,
+//      wired in as an extra source directory. Test Lab's `instrumentation`
+//      test type takes an app APK plus a test APK, which is why the harness is
+//      an androidTest suite in the example app rather than a library test.
+//
+//   3. TRIPWIRE T1 — the release/R8 run. `-PspikeTestBuildType=release` points
+//      `testBuildType` at the release variant so the SAME suite runs against a
+//      minified APK. The release build is already debug-signed by the Expo
+//      template, which is what makes that installable on a farm device.
+//
+//   4. THE KOTLIN METADATA FLAG (D2's toolchain wrinkle, register item 10).
+//      `genai-prompt` is compiled with Kotlin 2.3.21; the app's compiler is
+//      older and refuses to read that metadata. The library scopes
+//      `-Xskip-metadata-version-check` to its own compile tasks; here it is
+//      scoped to the *androidTest* compile tasks only, because only the spike's
+//      own Kotlin touches ML Kit types. NOTE THE FINDING FOR CONSUMERS: an app
+//      that merely adds the `implementation` line needs no compiler flag; an
+//      app whose own Kotlin calls ML Kit directly does.
+//
+// ----------------------------------------------------------------------------
+
+def spikeDir = new File(rootDir.parentFile, 'spike')
+
+// Keep this in step with `android/build.gradle`'s `ext.mlKitGenAiPromptVersion`
+// and with AvailabilityMapping.DEPENDENCY_COORDINATE. Pinned, never a range:
+// the API is beta and states verbatim that it may break backward compatibility.
+def mlKitGenAiPrompt = 'com.google.mlkit:genai-prompt:1.0.0-beta4'
+
+// The library project, as Expo autolinking names it. Declared explicitly on the
+// androidTest compile classpath so the suite can drive the real bridge
+// (`MlKitPresence`, `GenAiEngine`, `core/*`) rather than a copy of it.
+def libraryProject = ':taaltreelabs-on-device-llm-android'
+
+android {
+    defaultConfig {
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+
+        // A FINDING FROM BUILDING THIS, worth carrying back into the README.
+        // `genai-prompt`'s own AAR manifest declares minSdkVersion 26, and the
+        // Expo/RN template defaults to 24, so the manifest merger refuses the
+        // build outright:
+        //
+        //   uses-sdk:minSdkVersion 24 cannot be smaller than version 26
+        //   declared in library [com.google.mlkit:genai-prompt]
+        //
+        // So the consumer opt-in of D2 is not one line, it is TWO: the
+        // `implementation` coordinate AND minSdk >= 26. (The library module
+        // itself never hit this because Expo modules inherit the app's minSdk
+        // and it is compiled, not merged, against the AAR.) The alternative —
+        // `tools:overrideLibrary` in the manifest — would let the app install on
+        // API 24 devices where the SDK's own floor says it cannot work, which is
+        // a worse trade than a raised floor.
+        minSdkVersion 26
+    }
+
+    // T1: `-PspikeTestBuildType=release` runs the same suite against R8 output.
+    testBuildType = (findProperty('spikeTestBuildType') ?: 'debug')
+
+    sourceSets {
+        androidTest {
+            java.srcDirs += new File(spikeDir, 'src/androidTest/java')
+        }
+    }
+
+    buildTypes {
+        release {
+            // Our own keep rules for the app + test APK. The library's are in
+            // `android/consumer-rules.pro` and arrive automatically through the
+            // AAR/project dependency — that is the real deliverable; these two
+            // only keep the *harness* alive so it can report on the library.
+            proguardFiles new File(spikeDir, 'proguard-spike.pro')
+            testProguardFiles new File(spikeDir, 'proguard-spike-test.pro')
+        }
+    }
+
+    // A minified release APK plus an instrumentation APK can collide on
+    // duplicated metadata files from androidx.test.
+    packagingOptions {
+        resources {
+            excludes += [
+                'META-INF/LICENSE.md',
+                'META-INF/LICENSE-notice.md',
+                'META-INF/AL2.0',
+                'META-INF/LGPL2.1',
+            ]
+        }
+    }
+}
+
+dependencies {
+    // (1) The consumer opt-in. One line, in the app's own build.
+    implementation mlKitGenAiPrompt
+
+    // The spike's own Kotlin calls the SDK directly for the things the bridge
+    // deliberately does not expose (download progress, the raw `checkStatus`
+    // int, per-chunk stream timing), so it needs the same coordinate on the
+    // androidTest compile classpath. AGP subtracts anything already in the app
+    // APK from the test APK, so nothing is duplicated at install time.
+    androidTestImplementation mlKitGenAiPrompt
+    androidTestImplementation project(libraryProject)
+
+    androidTestImplementation 'androidx.test:core:1.6.1'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test:rules:1.6.1'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'junit:junit:4.13.2'
+}
+
+// (4) THE METADATA FLAG — and a finding that changes D2's consumer story.
+//
+// The plan was to scope this to the androidTest compile tasks, on the reasoning
+// that only the spike's own Kotlin touches ML Kit types. THAT IS NOT ENOUGH, and
+// the reason is worth writing down:
+//
+//   `implementation 'com.google.mlkit:genai-prompt'` puts genai-prompt,
+//   genai-common, genai-schema AND kotlin-stdlib 2.3.21 on the APP MODULE's
+//   compile classpath. The Kotlin compiler reads `META-INF/*.kotlin_module`
+//   eagerly for every classpath entry, so `:app:compileDebugKotlin` fails on
+//   `MainActivity.kt` — a file that has never heard of ML Kit:
+//
+//     e: … genai-common …kotlin_module Module was compiled with an incompatible
+//        version of Kotlin. The binary version of its metadata is 2.3.0,
+//        expected version is 2.1.0.
+//     e: … kotlin-stdlib-2.3.21.jar!/META-INF/kotlin-stdlib.kotlin_module …
+//     e: Internal compiler error … Exception in type checkers
+//
+// So the consumer opt-in of D2 is not one line. It is three, and this file is
+// the record of all three: the `implementation` coordinate, `minSdk 26`, and
+// this flag applied to the app module's OWN Kotlin compile tasks. A consumer
+// with any Kotlin at all in `app/` (every Expo and RN template has
+// MainActivity.kt and MainApplication.kt) cannot build without it.
+//
+// Two alternatives were considered and rejected:
+//   * Forcing kotlin-stdlib down to the toolchain's version. It would silence
+//     the same errors, but it runs genai-prompt's classes — compiled against
+//     stdlib 2.3.21 — on an older stdlib, turning a compile-time problem into a
+//     runtime `NoSuchMethodError` on the one device we cannot iterate on.
+//   * Raising the whole build's `kotlinVersion` to 2.3.21. The real fix, and
+//     expo-modules-autolinking does allow >= 2.3.0 (it falls back to the latest
+//     KSP), but it changes the compiler for every Expo module in the app to
+//     answer a question about one dependency. Worth revisiting when Expo's own
+//     pinned Kotlin catches up — at which point this whole block disappears.
+//
+// Matched by task class NAME rather than with `tasks.withType(KotlinCompile)`:
+// an applied script does not share the buildscript classloader that holds the
+// Kotlin Gradle plugin's types, so naming the class here fails with
+// "Could not get unknown property 'org'". The closure takes its options
+// explicitly for the same reason — a Groovy closure coerced to an Action does
+// not delegate to the action's argument.
+tasks.configureEach { task ->
+    if (task.class.name.contains('KotlinCompile')) {
+        task.compilerOptions { options ->
+            options.freeCompilerArgs.add('-Xskip-metadata-version-check')
+        }
+    }
+}
