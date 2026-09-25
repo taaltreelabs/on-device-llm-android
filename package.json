@@ -1,6 +1,6 @@
 {
   "name": "@taaltreelabs/on-device-llm-android",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Android on-device LLM provider (ML Kit GenAI / AICore) for @taaltreelabs/on-device-llm",
   "main": "./build/index.js",
   "types": "./build/index.d.ts",
