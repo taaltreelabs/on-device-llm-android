@@ -89,6 +89,25 @@ If your app uses [Continuous Native Generation](https://docs.expo.dev/workflow/c
 
 Both options are optional and default to the values shown — pin the version explicitly if you want your `app.json` to be the record of what's pinned rather than this package's default. Never use a version range: the API is beta, says so in its own terms, and has shipped four betas in eight months. Running `expo prebuild` more than once, or listing the plugin twice, adds nothing twice — every edit the plugin makes checks for its own already-applied marker first.
 
+If the app also builds for iOS with `@taaltreelabs/on-device-llm` 0.2.0 or newer, list that package's plugin as well. It fixes a launch crash that every freshly prebuilt Expo 57 app hits on the iOS 27 SDK (see [its README](https://github.com/taaltreelabs/on-device-llm#the-app-crashes-at-launch-with-uiscene-life-cycle-is-required)). The two plugins edit different platforms, so their order does not matter:
+
+```json
+{
+  "expo": {
+    "plugins": [
+      "@taaltreelabs/on-device-llm",
+      [
+        "@taaltreelabs/on-device-llm-android",
+        {
+          "mlKitGenAiPromptVersion": "1.0.0-beta4",
+          "minSdkVersion": 26
+        }
+      ]
+    ]
+  }
+}
+```
+
 The plugin edits `android/gradle.properties` (for (b)) and the generated `android/app/build.gradle` (for (a) and (c)) — the same three edits above, written by code instead of by hand. See its source for why `gradle.properties` and not a regex over the root `build.gradle`'s `ext` block: every Expo/RN template already reads that property with its own fallback, so this plugin is using the template's own extension point rather than pattern-matching Groovy that has changed shape across SDK versions.
 
 ## Privacy & terms
