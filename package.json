@@ -53,12 +53,12 @@
   "homepage": "https://github.com/taaltreelabs/on-device-llm-android#readme",
   "dependencies": {},
   "peerDependencies": {
-    "@taaltreelabs/on-device-llm": "^0.1.0",
+    "@taaltreelabs/on-device-llm": "^0.1.0 || ^0.2.0",
     "expo": "*",
     "react-native": "*"
   },
   "devDependencies": {
-    "@taaltreelabs/on-device-llm": "^0.1.0",
+    "@taaltreelabs/on-device-llm": "^0.1.0 || ^0.2.0",
     "@types/react": "~19.1.1",
     "eslint": "~9.39.4",
     "eslint-config-universe": "^15.0.3",
