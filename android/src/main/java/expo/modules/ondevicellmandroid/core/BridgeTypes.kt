@@ -12,7 +12,7 @@
 //     verified on CI is the logic that does not touch the SDK. Everything in
 //     this package is a pure function over plain data and is covered by JVM
 //     unit tests in `android/src/test`.
-//  2. **The dependency firewall (DECISIONS.md D33).** `com.google.mlkit:genai-prompt`
+//  2. **The dependency firewall.** `com.google.mlkit:genai-prompt`
 //     is a `compileOnly` dependency — it is *not* packaged into a consumer's
 //     APK. A class that references an absent type fails verification when it is
 //     loaded, so every ML Kit reference is confined to `GenAiEngine.kt`, which
@@ -21,7 +21,7 @@
 //
 //  The wire shapes mirror `ios/Core/BridgeTypes.swift` field for field, because
 //  `src/apple/native/types.ts` is the contract the TypeScript half decodes with
-//  (docs/research/android-genai.md §9: D17's wire shape transfers unchanged).
+//  (docs/research/android-genai.md §9: transcript handling's wire shape transfers unchanged).
 //
 
 package expo.modules.ondevicellmandroid.core
@@ -68,7 +68,7 @@ data class BridgeRequest(
      * `invalidRequest`, not something to silently coerce to `user`. Same
      * backstop posture as `BridgeRequest.parse` in Swift.
      *
-     * **No `schemaJson` and no `tools` parameter (DECISIONS.md D6).** The
+     * **No `schemaJson` and no `tools` parameter.** The
      * single-package wave 1 accepted both and rejected them here, because the
      * module answered to the same registered name as the Apple one and a single
      * TypeScript caller had to pass the same argument list to both. That is gone:
@@ -116,7 +116,7 @@ data class BridgeRequest(
  * `candidates` and `thoughtProcess` and nothing else
  * (docs/research/android-genai.md §1). Absent means "not reported", never zero
  * — `src/core/generation.ts` is explicit that hardcoded zeros are
- * indistinguishable from a real measurement, which is the bug D1 called out in
+ * indistinguishable from a real measurement, which is the bug provider contract called out in
  * `@react-native-ai/apple`.
  */
 data class BridgeUsage(
@@ -190,7 +190,7 @@ data class BridgeErrorPayload(
   val resetDate: Double? = null,
   // `unknown`
   val transient: Boolean? = null,
-  // Diagnostics. DECISIONS.md D9: losing the native domain and code is what
+  // Diagnostics. Native diagnostics: losing the native domain and code is what
   // makes an unknown failure unreportable.
   val nativeDomain: String? = null,
   val nativeCode: Int? = null,
@@ -240,7 +240,7 @@ sealed class BridgeStreamEvent {
    * Text produced since the previous delta.
    *
    * `reset` exists for wire compatibility with `NativeStreamEvent` and carries
-   * the same meaning it does on Apple (DECISIONS.md D18): *this delta did not
+   * the same meaning it does on Apple: *this delta did not
    * simply extend what came before*. On Apple that is the snapshot-diff
    * fallback; on Android it is the tripwire described in
    * `StreamAccumulator` — see there for why forwarding is still as-is.

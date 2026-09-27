@@ -3,7 +3,7 @@
 #  Shipped to consumers via `consumerProguardFiles` — see android/build.gradle.
 # ============================================================================
 #
-#  TRIPWIRE T1 (DECISIONS.md). The dependency firewall (D2) is built out of two
+#  Reflective loading. The dependency firewall is built out of two
 #  reflective lookups by NAME:
 #
 #     MlKitPresence.isAvailable   -> Class.forName("com.google.mlkit.genai.prompt.Generation")

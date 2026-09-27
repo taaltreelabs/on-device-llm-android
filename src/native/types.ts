@@ -7,9 +7,9 @@
  * *conventions* of the main package's Apple native types: failures are returned
  * as a discriminated union rather than thrown, and every streaming payload
  * carries its `requestId` so the one shared `onStreamEvent` channel can be
- * demultiplexed (docs/research/android-genai.md §9 — "D17's wire shape …
+ * demultiplexed (docs/research/android-genai.md §9 — "the shared wire shape …
  * transfers to Android unchanged"). The wire *surface* is this package's own and
- * no longer has to match Apple's argument lists (DECISIONS.md D6).
+ * no longer has to match Apple's argument lists.
  *
  * Nothing here imports anything, so the file is safe to load on any platform.
  *
@@ -34,7 +34,7 @@
  * `reset` flag on `delta`. `generateContentStream` emits true incremental
  * deltas (confirmed from the bytecode, docs/research/android-genai.md §2 —
  * "There is no `StringBuilder`, no `append`, and no accumulator field"), so
- * there is no DECISIONS.md D18-style snapshot-diff fallback to signal.
+ * there is no Apple-style snapshot-diff fallback to signal.
  */
 
 /**
@@ -56,8 +56,7 @@ export interface AndroidNativeAvailability {
 export interface AndroidNativeCapabilities {
   /**
    * `GenerativeModel.getTokenLimit()`, already guarded: the native side sends
-   * `0` rather than a negative or nonsense value, and `0` means "unknown"
-   * (mirrors DECISIONS.md D9). Combined input+output budget, exactly like
+   * `0` rather than a negative or nonsense value, and `0` means "unknown". Combined input+output budget, exactly like
    * Apple's `contextSize` (docs/research/android-genai.md §4).
    */
   readonly contextWindow: number;
@@ -146,12 +145,12 @@ export interface AndroidNativeSubscription {
  *
  * Registered as **`OnDeviceLlmAndroid`** — see `expo-module.config.json` and
  * `Name("OnDeviceLlmAndroid")` in the Kotlin module. The rename away from the
- * main package's `OnDeviceLlm` is DECISIONS.md D1 at the wire: one registered
+ * main package's `OnDeviceLlm` is package separation at the wire: one registered
  * name now has exactly one native implementation, so `./resolve.ts` no longer
  * has to work out which platform's module Expo handed it.
  *
  * `supportsLocale` and the `schemaJson` / `tools` / `toolCallTimeoutMs`
- * arguments are absent, by D6 — they existed only so one TypeScript caller could
+ * arguments are absent from the native protocol — they existed only so one TypeScript caller could
  * drive both platforms' modules under one name, and the wave-1 arity mismatch
  * they caused (Kotlin `generate` declared five positional arguments, this
  * interface described four) is the sort of defect a shim nobody calls invites.

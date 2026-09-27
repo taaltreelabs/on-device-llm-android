@@ -8,7 +8,7 @@
 //  `android/`:
 //
 //    (a) `implementation 'com.google.mlkit:genai-prompt:<version>'` in the
-//        app module's `build.gradle` — the opt-in itself (DECISIONS.md D2).
+//        app module's `build.gradle` — the opt-in itself.
 //    (b) `minSdkVersion` >= 26 — `genai-prompt`'s AAR manifest declares
 //        `minSdkVersion 26`; the Expo/RN template defaults to 24, and the
 //        manifest merger refuses the build outright otherwise.
@@ -46,7 +46,7 @@ const {
 
 // Keep in step with `example/spike/spike.gradle`'s
 // `ext.mlKitGenAiPromptVersion` and the coordinate in README.md and
-// DECISIONS.md D2. Pinned, never a range — the API is beta and says so.
+// SDK version. Pinned, never a range — the API is beta and says so.
 const DEFAULT_ML_KIT_GENAI_PROMPT_VERSION = '1.0.0-beta4';
 
 // The AAR manifest's own floor (SPIKE.md's "consumer opt-in is three lines"

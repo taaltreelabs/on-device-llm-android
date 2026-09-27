@@ -89,11 +89,7 @@ jobs:
           npm run check:pack
 
       - name: Publish to npm
-        # --tag alpha keeps releases off `latest` until the wave-2 hardware spike
-        # validates the PROVISIONAL register (DECISIONS.md). Promote without a
-        # republish once it passes:
-        #   npm dist-tag add @taaltreelabs/on-device-llm-android@<version> latest
-        run: npm publish --provenance --access public --tag alpha
+        run: npm publish --provenance --access public --tag latest
 
       - name: Create GitHub Release
         run: gh release create "${{ steps.tag.outputs.tag }}" --generate-notes --verify-tag

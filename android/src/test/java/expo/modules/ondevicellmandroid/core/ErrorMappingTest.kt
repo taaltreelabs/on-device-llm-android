@@ -2,7 +2,7 @@
 //  ErrorMappingTest.kt
 //  OnDeviceLlm — Android
 //
-//  The 21-code table (DECISIONS.md D36), asserted row by row.
+//  The 21-code table, asserted row by row.
 //
 //  The Phase 4 router branches on these codes, so a mismapping is not cosmetic:
 //  it is a request retried that should not be, or abandoned that should have
@@ -60,7 +60,7 @@ class ErrorMappingTest {
   @Test
   fun `getRetryDelay becomes an absolute resetDate in epoch milliseconds`() {
     // The one field Apple's `RateLimited.resetDate` has a direct counterpart
-    // for, and D30 makes `rateLimited` a fallback trigger — so the number is
+    // for, and fallback policy makes `rateLimited` a fallback trigger — so the number is
     // load-bearing, not decoration. The SDK reports a *relative* duration; the
     // wire wants an absolute time JS can hand to `new Date(n)`.
     val payload = map(GenAiErrorCode.BUSY, retryDelayMs = 30_000L, nowMs = 1_000_000L)
@@ -91,9 +91,9 @@ class ErrorMappingTest {
   }
 
   @Test
-  fun `the D9 lane is transient unknown`() {
+  fun `the transient-failure handling lane is transient unknown`() {
     // The documented shape of "inference failed on healthy, eligible hardware".
-    // D30 has `unknownTransient` on by default, so these are the failures the
+    // fallback policy has `unknownTransient` on by default, so these are the failures the
     // router is allowed to fail over.
     listOf(
       GenAiErrorCode.REQUEST_PROCESSING_ERROR,
@@ -111,7 +111,7 @@ class ErrorMappingTest {
 
   @Test
   fun `the SDK's own UNKNOWN leaves transient unset`() {
-    // D30: "don't know" shares the non-retryable switch. Treating every mystery
+    // fallback policy: "don't know" shares the non-retryable switch. Treating every mystery
     // as retryable makes each one cost two generations and two bills.
     val payload = map(GenAiErrorCode.UNKNOWN)
 
@@ -149,7 +149,7 @@ class ErrorMappingTest {
 
   @Test
   fun `an unclassified throwable is transient unknown with its class attached`() {
-    // D9's Android form. A NoClassDefFoundError from a half-present SDK, an
+    // transient-failure handling's Android form. A NoClassDefFoundError from a half-present SDK, an
     // IllegalStateException from ML Kit's internals: unclassifiable, but never
     // unreportable and never fatal.
     val payload = ErrorMapping.mapUnclassified("java.lang.IllegalStateException", "boom")
@@ -190,9 +190,9 @@ class ErrorMappingTest {
 
   @Test
   fun `no code ever maps to guardrail`() {
-    // D36, the safety asymmetry: there is no guardrail code on Android and
+    // safety-error mapping, the safety asymmetry: there is no guardrail code on Android and
     // there cannot be one. Safety is implemented as injected prompt text, so a
-    // refusal most likely arrives as ordinary generated text. D30's policy that
+    // refusal most likely arrives as ordinary generated text. fallback policy's policy that
     // `guardrail` does not fall through by default is therefore unenforceable
     // here. This test exists so the absence stays deliberate.
     GenAiErrorCode.entries.forEach { code ->

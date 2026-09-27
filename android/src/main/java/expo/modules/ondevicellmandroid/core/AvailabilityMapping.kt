@@ -75,7 +75,7 @@ object AvailabilityMapping {
     }
 
   /**
-   * The ML Kit GenAI SDK is not in this build (DECISIONS.md D33).
+   * The ML Kit GenAI SDK is not in this build.
    *
    * **Why `unsupportedPlatform` and not `notEnabled`.** Argued from the two
    * reasons' documented semantics in `src/core/availability.ts`:
@@ -114,7 +114,7 @@ object AvailabilityMapping {
   )
 
   /**
-   * `FeatureStatus` -> `Availability` (DECISIONS.md D34).
+   * `FeatureStatus` -> `Availability`.
    *
    * | Android signal | ours |
    * |---|---|
@@ -124,12 +124,12 @@ object AvailabilityMapping {
    * | `UNAVAILABLE` | `deviceNotEligible` |
    * | anything else | `modelNotReady` |
    *
-   * **`DOWNLOADABLE`: report, do not download (D34).** `Flow<DownloadStatus>
+   * **`DOWNLOADABLE`: report, do not download.** `Flow<DownloadStatus>
    * download()` is right there and it is tempting to have `availability()`
    * start it. Three reasons not to:
    *
    * 1. **`availability()` is a question, not a command.** The Phase 4 router
-   *    calls it on every route decision (behind a 5-second TTL cache, D28), and
+   *    calls it on every route decision (behind a 5-second TTL cache, routing policy), and
    *    `useAvailability` calls it on mount. Starting a multi-hundred-megabyte,
    *    possibly metered download as a side effect of *asking* is the kind of
    *    surprise a library must never spring — and the caller never consented,
@@ -156,7 +156,7 @@ object AvailabilityMapping {
   fun fromFeatureStatus(status: FeatureStatusCode?, rawStatus: Int): BridgeAvailability =
     when (status) {
       FeatureStatusCode.AVAILABLE ->
-        // D9 still applies, on both platforms: `available` means "nothing known
+        // transient-failure handling still applies, on both platforms: `available` means "nothing known
         // is blocking me", not "the next request will succeed". §11.1 records
         // `Feature not available` crashes on real, AICore-equipped Pixel
         // hardware while status said otherwise.

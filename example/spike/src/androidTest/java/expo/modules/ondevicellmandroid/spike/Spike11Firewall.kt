@@ -53,7 +53,7 @@ class Spike11Firewall {
 
     // A second library class, loaded the ordinary way — reading a constant off
     // `AvailabilityMapping` above is the load. `core/` must NOT reference ML Kit
-    // (D2's confinement rule), so a class in it that fails to load while
+    // (SDK installation's confinement rule), so a class in it that fails to load while
     // `GenAiEngine` works means the rule has been broken and a clean
     // "unsupported" has become a crash. Reaching this line is the evidence.
     ctx.put("coreClassLoadedWithoutMlKit", true)
@@ -158,7 +158,7 @@ class Spike11Firewall {
         ctx.verdict(
           Verdict.REFUTED,
           "the firewall loaded but ${linkage.size} linkage error(s) were recorded elsewhere in " +
-            "this run: $linkage. D2's rule is that ML Kit references live in GenAiEngine ALONE; " +
+            "this run: $linkage. SDK installation's rule is that ML Kit references live in GenAiEngine ALONE; " +
             "a NoClassDefFoundError from any other class means that confinement is broken and a " +
             "clean 'unsupported' has become a crash.",
         )

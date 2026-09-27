@@ -3,7 +3,7 @@
 //
 //  The library confines every `com.google.mlkit.genai.*` reference to
 //  `GenAiEngine.kt` and reaches it by name, because a class that references an
-//  absent type fails when it is LOADED, not when it is called (D2). The spike
+//  absent type fails when it is LOADED, not when it is called. The spike
 //  needs the same discipline for the same reason — in the T1 release run it is
 //  the likeliest thing to go wrong — so this file declares the surface in
 //  primitives, strings and lambdas, `SpikeMlKitImpl.kt` is the only file in the
@@ -17,7 +17,7 @@
 //  Why the spike talks to the SDK directly at all, rather than only through
 //  `GenAiBridge`: three of the register's questions are about surface the bridge
 //  deliberately does not expose. `download()` is not called by the provider at
-//  all (D3 — `availability()` is a question, not a command), the raw
+//  all (availability contract — `availability()` is a question, not a command), the raw
 //  `checkStatus()` int is mapped away before the bridge returns it (item 6 asks
 //  what the raw value is), and per-chunk arrival timing is not on the wire. The
 //  rule the suite follows is: measure through the bridge wherever the bridge can

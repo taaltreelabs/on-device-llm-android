@@ -25,7 +25,7 @@
 //  so the whole table is unit-testable on a machine with no Android SDK.
 //
 //  ---------------------------------------------------------------------------
-//  THE GUARDRAIL ASYMMETRY (DECISIONS.md D36)
+//  THE GUARDRAIL ASYMMETRY
 //  ---------------------------------------------------------------------------
 //  **There is no `guardrail` code on Android, and there cannot be one.** No
 //  member of `GenAiException.ErrorCode` denotes a safety refusal. Safety is
@@ -35,13 +35,12 @@
 //  as ordinary generated text, or at worst as `RESPONSE_GENERATION_ERROR`.
 //
 //  The consequence is a real cross-platform behaviour difference, not a gap in
-//  this table: DECISIONS.md D30 makes `guardrail` the one error code that does
+//  this table: The router makes `guardrail` the one error code that does
 //  **not** fall through to a cloud provider by default, precisely so that
 //  content the on-device model refused is not quietly re-sent somewhere else.
 //  On Android that policy is unenforceable — the refusal never reaches the
 //  taxonomy — so an app relying on it behaves differently per platform. Nothing
-//  in this file can fix that; it is recorded here, in D36, and in the
-//  PROVISIONAL register so it is a known asymmetry rather than a surprise.
+//  in this file can fix that; callers must account for this platform difference.
 //
 
 package expo.modules.ondevicellmandroid.core
@@ -121,7 +120,7 @@ object ErrorMapping {
    *
    * - **`getRetryDelay()` -> `resetDate`.** Apple's `RateLimited.resetDate` has
    *   a direct Android counterpart, so `RateLimitedErrorDetails.resetDate` is
-   *   populatable on both platforms — and D30 makes `rateLimited` a fallback
+   *   populatable on both platforms — and fallback policy makes `rateLimited` a fallback
    *   trigger, so the number is load-bearing rather than decorative. It is
    *   converted to epoch milliseconds here (the wire form `new Date(n)` wants)
    *   from a *relative* duration, which means it is computed against the clock
@@ -130,17 +129,17 @@ object ErrorMapping {
    *   failure modes with no iOS analogue** (§11.6). A long chat can be
    *   throttled by the OS mid-conversation; `getRetryDelay()` is what makes
    *   that survivable.
-   * - **The D9 lane carries the bulk of it.** `REQUEST_PROCESSING_ERROR`,
+   * - **The transient-failure handling lane carries the bulk of it.** `REQUEST_PROCESSING_ERROR`,
    *   `RESPONSE_PROCESSING_ERROR`, `RESPONSE_GENERATION_ERROR` and
    *   `CACHE_PROCESSING_ERROR` are the documented shape of "inference failed on
    *   healthy, eligible hardware" — AICore's own `2-INFERENCE_ERROR` /
    *   `29-INTERNAL_ERROR` surfaces (§11.1), and the SDK's own bytecode carries
    *   the string "Inference failed with prefix cache, retry without cache",
-   *   i.e. Google treats first-attempt failure as expected. D9's
+   *   i.e. Google treats first-attempt failure as expected. transient-failure handling's
    *   transient-`unknown` lane is not optional here; it is load-bearing from
    *   day one, and it is what lets the Phase 4 router fail over
-   *   (`unknownTransient`, on by default per D30).
-   * - **`UNKNOWN` leaves `transient` unset** rather than guessing `true`. D30
+   *   (`unknownTransient`, on by default per fallback policy).
+   * - **`UNKNOWN` leaves `transient` unset** rather than guessing `true`. fallback policy
    *   is explicit that "don't know" shares the non-retryable switch, because
    *   treating every mystery as retryable makes each one cost two generations
    *   and two bills. A *named* failure we have classified as transient is a
@@ -291,7 +290,7 @@ object ErrorMapping {
    * A raw `Throwable` that was never a `GenAiException`.
    *
    * `unknown` + `transient: true`, with the class name and message attached —
-   * the Android form of D9's untyped-`NSError` branch. A `NoClassDefFoundError`
+   * the Android form of transient-failure handling's untyped-`NSError` branch. A `NoClassDefFoundError`
    * from a half-present SDK, an `IllegalStateException` from ML Kit's internal
    * initialisation, an `IllegalArgumentException` from a request shape the
    * builder rejects: none of them is classifiable, all of them must be

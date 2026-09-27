@@ -10,12 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Build, typecheck, lint (incl. the no-react rule) and the 73 TypeScript unit
-  # tests. The tests run against a scriptable fake of the native bridge, which is
-  # the only thing any runner can verify: AICore is a preinstalled system service
-  # present on no emulator image (docs/research/android-genai.md §6), so nothing
-  # in CI ever speaks to a model. DECISIONS.md's PROVISIONAL register is the list
-  # of what CI therefore cannot cover.
+  # Build, typecheck, lint, and tests against a fake native bridge.
   checks:
     name: typecheck, lint, unit tests
     runs-on: ubuntu-latest
@@ -51,8 +46,7 @@ jobs:
         run: npm run test:ci
 
   # Verifies the published tarball: compiled JS + declarations, android/src/main,
-  # expo-module.config.json, README.md (which carries the Privacy & terms section
-  # that is the reason this package exists — see DECISIONS.md D1) and LICENSE;
+  # expo-module.config.json, README.md (including SDK data-flow guidance) and LICENSE;
   # and asserts android/src/test, example/, docs/, src/, scripts/, .github/ and
   # every test file are absent. See scripts/check-pack.mjs for the assertions.
   pack:

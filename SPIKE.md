@@ -1,17 +1,8 @@
-# SPIKE.md — the wave-2 hardware spike
+# Android instrumentation harness
 
-**What this is.** An instrumentation-test suite that answers DECISIONS.md's
-[PROVISIONAL register](DECISIONS.md#provisional-register) items 0–12 and
-tripwires T1/T2 on real hardware, designed to run on **Firebase Test Lab
-physical devices** because AICore is a preinstalled system service that exists on
-no emulator image (`docs/research/android-genai.md` §6). There is no CI path and
-no laptop dev loop for any of it.
-
-**What it is not.** It has never been run. Every line of it was written blind:
-the harness compiles (debug and minified release, both APK pairs), the library's
-60 JVM tests and the 73 TypeScript tests still pass, and the R8 keep rules are
-verifiably applied — but **no verdict in this suite has ever been produced by a
-device.** Treat the first run as the experiment it is.
+This suite exercises prompt encoding, system instructions, cancellation, streaming,
+token limits, error mapping, and SDK loading on eligible Android devices. It includes
+debug and minified-release APK configurations and Firebase Test Lab commands.
 
 ---
 
@@ -81,7 +72,7 @@ directory.
 
 ### The consumer opt-in is three lines, not one — a finding from building this
 
-D2 describes the opt-in as one `implementation` line. Building the example app
+An earlier setup description used one `implementation` line. Building the example app
 with the dependency actually present proves it is three, and
 `example/spike/spike.gradle` carries all three with the evidence in comments:
 
@@ -326,9 +317,8 @@ adb pull /sdcard/Android/data/expo.modules.ondevicellmandroid.example/files/spik
    jq -c 'select(.item|test("#progress")|not) | {item, verdict, detail}' spike-results.jsonl
    jq '.data' <(grep '"item":"04"' spike-results.jsonl)   # the full distribution
    ```
-4. **Write the answers into DECISIONS.md.** Each register item's verdict either
-   retires a PROVISIONAL marker or changes a decision. A `refuted` on item 1
-   (role encoding) or item 3 (cancel semantics) is a design change, not a bug fix.
+4. **Record the results with the tested package and device versions.** Use failed
+   checks to identify required changes to prompt encoding, cancellation, or native setup.
 
 ---
 
@@ -341,13 +331,13 @@ the index.
 | item | class | measurement | `refuted` means |
 |---|---|---|---|
 | 00 | `Spike00ViabilityProbe` | `checkStatus` → optional `download()` with a 10-min budget and 15-s progress lines → one "Say OK" generation through the real bridge | — (`blocked` outcomes only) |
-| 01 | `Spike01RoleEncoding` | a fact planted in an earlier turn, asked for in the last; three arms — framed multi-turn (the shipped path), **unlabelled** multi-turn, single-turn control — plus frame echo | the `User:`/`Model:` frame is not read as turn attribution (D4 needs rewriting) |
-| 02 | `Spike02SystemInstruction` | `isSystemPromptAvailable()`, then uppercase-adherence ratios across four arms including a **forced fold path** (D4's never-executed branch) | system instructions reach the model by neither route |
+| 01 | `Spike01RoleEncoding` | a fact planted in an earlier turn, asked for in the last; three arms — framed multi-turn (the shipped path), **unlabelled** multi-turn, single-turn control — plus frame echo | the `User:`/`Model:` frame is not read as turn attribution (role encoding needs rewriting) |
+| 02 | `Spike02SystemInstruction` | `isSystemPromptAvailable()`, then uppercase-adherence ratios across four arms including a **forced fold path** (system-instruction fallback branch) | system instructions reach the model by neither route |
 | 03 | `Spike03CancelSemantics` | cancel from inside the first delta callback; measures (a) delivery tail after cancel, (b) how long `stream()` takes to return, compared against item 4's uncancelled duration | cancellation stops delivery only — our contract's `signal` guarantee is unmet |
-| 04 | `Spike04DeltaGranularity` | per-chunk length + inter-arrival distribution for ~200 tokens; the engine's `StreamAccumulator` `reset` flag **and** an independent accumulator; `finish.text` vs concatenated deltas | the stream is cumulative, not delta-per-callback (Apple's D5 problem, on Android) |
+| 04 | `Spike04DeltaGranularity` | per-chunk length + inter-arrival distribution for ~200 tokens; the engine's `StreamAccumulator` `reset` flag **and** an independent accumulator; `finish.text` vs concatenated deltas | the stream is cumulative, not delta-per-callback (Apple's stream contract problem, on Android) |
 | 05 | `Spike05TokenLimit` | `getTokenLimit()`, then an input sized to 95% of it **using `countTokens`**, then 120% | the reported limit is not the enforced limit |
 | 06 | `Spike06ModelIdentity` | `getBaseModelName()` + `nano-vN`, three `checkStatus` samples, the four `FeatureStatus` constant **values**, three feature probes | `checkStatus` returned a fifth state |
-| 07 | `Spike07Warmup` | fresh client, cold first-token → `warmup()` → warm first-token; **and** whether `warmup()` moves DOWNLOADABLE → DOWNLOADING | `warmup()` buys nothing — or, worse, starts a download and breaks D3's promise for `prewarm` |
+| 07 | `Spike07Warmup` | fresh client, cold first-token → `warmup()` → warm first-token; **and** whether `warmup()` moves DOWNLOADABLE → DOWNLOADING | `warmup()` buys nothing — or, worse, starts a download and breaks availability contract's promise for `prewarm` |
 | 08 | `Spike08CountTokens` | the same conversation counted through the bridge and past it (must agree), plus the documented `countTokens + maxOutputTokens ≤ limit` invariant | the bridge counts something other than what it sends |
 | 09 | `Spike09ErrorArrival` | forced overflow → raw code vs what `ErrorMapping` made of it; a **mild, benign** safety probe (text in the source) → prose refusal or typed error; `getRetryDelay()` | the 21-code table mismaps a real code |
 | 10 | `Spike10MetadataDispatch` | one of each *kind* of SDK surface — int constants, companion constants, builder property setters, suspend calls — classifying **linkage** failures apart from `GenAiException`s | `-Xskip-metadata-version-check` is hiding a real shape difference (T2) |

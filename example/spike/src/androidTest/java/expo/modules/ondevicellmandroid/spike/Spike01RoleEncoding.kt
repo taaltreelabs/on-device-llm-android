@@ -1,10 +1,10 @@
 //
-//  Spike01RoleEncoding.kt — PROVISIONAL register item 1 (DECISIONS.md D4)
+//  Spike01RoleEncoding.kt — PROVISIONAL register item 1
 //
 //  THE QUESTION. `Content` has no role field: `javap -p` finds one private
 //  `List` on it, and the strings `role`/`user`/`model`/`assistant` appear nowhere
 //  in the 1,473 classes of `genai-prompt` (research §1). So multi-turn history
-//  can only be expressed by inventing a textual frame, and D4 invented
+//  can only be expressed by inventing a textual frame, and role encoding invented
 //  `User: …` / `Model: …`. Does it work, does the model even need it, and does it
 //  leak into the output?
 //
@@ -16,7 +16,7 @@
 //   A. framed multi-turn, through the bridge: the shipped path, `PromptEncoding`
 //      producing `User: …` / `Model: …` in three `Content`s.
 //   B. unlabelled multi-turn, past the bridge: the same three `Content`s with no
-//      labels at all. If B recalls and A does not, the frame is NOISE and D4's
+//      labels at all. If B recalls and A does not, the frame is NOISE and role encoding's
 //      central guess is actively harmful.
 //   C. single-turn control: fact and question in one bare `Content`, the shape
 //      every documented Google sample uses. If C fails too, the model cannot do
@@ -85,7 +85,7 @@ class Spike01RoleEncoding {
       ),
     )
     if (!encoded.framed) {
-      ctx.bug("a three-message conversation encoded unframed; D4 says framed whenever turns > 1")
+      ctx.bug("a three-message conversation encoded unframed; role encoding says framed whenever turns > 1")
     }
 
     // ---- A. framed multi-turn, the shipped path ---------------------------
@@ -148,7 +148,7 @@ class Spike01RoleEncoding {
           Verdict.REFUTED,
           "the model can do the task (single-turn=$singleRecall, unlabelled multi-turn=" +
             "$unlabelledRecall) but the framed multi-turn encoding did NOT recall the fact — " +
-            "D4's `User:`/`Model:` frame is not being read as turn attribution on this device",
+            "role encoding's `User:`/`Model:` frame is not being read as turn attribution on this device",
         )
 
       else ->
@@ -156,7 +156,7 @@ class Spike01RoleEncoding {
           Verdict.INCONCLUSIVE,
           "no arm recalled the fact, including the single-turn control, so this measures the " +
             "model's ability rather than the encoding. Re-run with a simpler needle before " +
-            "concluding anything about D4.",
+            "concluding anything about role encoding.",
         )
     }
   }

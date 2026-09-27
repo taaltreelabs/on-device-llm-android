@@ -10,7 +10,7 @@
  * the caller reports as `unavailable` / `unsupportedPlatform`.
  *
  * **`requireNativeModule('OnDeviceLlmAndroid')` — the name is the point.**
- * DECISIONS.md D1: when the Android and Apple providers shipped in one npm
+ * Package separation: when the Android and Apple providers shipped in one npm
  * package, both native halves registered as `OnDeviceLlm`, so the name told you
  * nothing about which platform's implementation Expo was about to hand back, and
  * this file had to work that out by inspection. Duck-typing could not do it
@@ -102,7 +102,7 @@ function isAndroidPlatform(): boolean {
 /**
  * The Kotlin module, or `undefined` on any platform that does not have it: iOS,
  * web, Node, and any Android build whose app has not added the ML Kit GenAI
- * dependency (DECISIONS.md D2 — the module itself always loads; it is the
+ * dependency (the module behavior — the module itself always loads; it is the
  * *engine* inside it that is absent, and `availability()` says so).
  *
  * Never throws. The result is cached, including the failure — a platform does

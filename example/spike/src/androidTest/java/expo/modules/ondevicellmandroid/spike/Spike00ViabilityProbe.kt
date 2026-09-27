@@ -125,7 +125,7 @@ class Spike00ViabilityProbe {
     // ---- 3. one tiny generation, through the shipped code path -------------
     //
     // "Say OK" with a small output budget is the cheapest possible proof that
-    // AVAILABLE means available — which is exactly what D9 was learned about on
+    // AVAILABLE means available — which is exactly what transient-failure handling was learned about on
     // Apple and what §11.1 documents happening here (`AVAILABLE` then
     // `Feature not available` on real Pixel hardware).
     val engine = SpikeBridge.engine

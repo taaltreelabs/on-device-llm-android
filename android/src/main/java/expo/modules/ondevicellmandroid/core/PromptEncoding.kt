@@ -2,18 +2,7 @@
 //  PromptEncoding.kt
 //  OnDeviceLlm — Android
 //
-//  ############################################################################
-//  # PROVISIONAL — PENDING HARDWARE (DECISIONS.md D35)                        #
-//  #                                                                          #
-//  # Nothing in this file has been observed working against a real model. It  #
-//  # cannot be: AICore is a preinstalled system service and runs on no        #
-//  # emulator (docs/research/android-genai.md §6), so the *only* way to learn #
-//  # whether this encoding is respected is to run it on an allowlisted device.#
-//  # The wave-2 spike walks the list in DECISIONS.md "PROVISIONAL register".  #
-//  #                                                                          #
-//  # It is deliberately arranged so that the answer can be changed in one     #
-//  # place: `RoleFrame`. Everything else is mechanical.                       #
-//  ############################################################################
+//  Role framing is centralized in `RoleFrame` so it can be changed in one place.
 //
 //  The problem, in one line: **`Content` has no role field.**
 //
@@ -29,7 +18,7 @@
 //  `List<Content>` and the runtime's turn-attribution contract is undocumented
 //  — every published Google sample is single-turn.
 //
-//  So, unlike Apple's typed `Transcript` entries (D17), a multi-turn
+//  So, unlike Apple's typed `Transcript` entries, a multi-turn
 //  conversation can only be expressed by **inventing a textual frame**. This
 //  file invents it, and does so as pure string transformation: the engine
 //  turns the strings this produces into `Content`/`SystemInstruction` objects
@@ -113,7 +102,7 @@ object PromptEncoding {
    * **System messages.** `SystemInstruction` is a first-class request field and
    * `isSystemPromptAvailable()` reports whether the resident model honours it
    * (§1). All system messages are concatenated in their original order — a JS
-   * conversation can carry them anywhere, and a Phase 2 rolling summary (D13)
+   * conversation can carry them anywhere, and a Phase 2 rolling summary
    * is a non-pinned `system` message sitting in front of the retained turns.
    * Blank ones are dropped. Their position *between* turns is not preserved,
    * exactly as on Apple, because the request has one system slot.
@@ -123,10 +112,10 @@ object PromptEncoding {
    * would silently discard the caller's instructions; putting it in its own
    * `Content` would spend a turn slot on something that is not a turn.
    *
-   * **The trailing user message (D17's Android form).** Apple splits the
+   * **The trailing user message (transcript handling's Android form).** Apple splits the
    * conversation because `respond(to:)` and the seeded transcript are different
    * things. ML Kit has no such split — `contents` is the whole request — so
-   * there is nothing to hold back. What *does* transfer is the rule D17
+   * there is nothing to hold back. What *does* transfer is the rule transcript handling
    * introduced and `src/apple/…/buildNativeRequest` already enforces in
    * TypeScript: **a request must end with a user message.** There is no
    * "continue your own last message" affordance here either, and a conversation

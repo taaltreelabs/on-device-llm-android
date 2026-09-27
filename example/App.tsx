@@ -5,8 +5,7 @@
  * already prove the Kotlin half compiles against the real `genai-prompt`
  * artifacts and passes its 60 JVM tests — see `example/spike/` for the
  * hardware-spike harness that answers everything a JVM test cannot. This
- * screen's job is different and much smaller: it is exactly what
- * DECISIONS.md's register item 12 still owes ("autolinking did not register
+ * screen's job is different and much smaller: it checks native module registration ("autolinking did not register
  * the module, or the name is not `OnDeviceLlmAndroid`" — the one thing no
  * JVM test or instrumentation test can check, because it needs a real JS
  * runtime talking to Expo's module registry).

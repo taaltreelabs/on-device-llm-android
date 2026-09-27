@@ -1,8 +1,8 @@
 //
-//  Spike12Registration.kt — PROVISIONAL register item 12 (D1)
+//  Spike12Registration.kt — PROVISIONAL register item 12
 //
 //  THE QUESTION. Does `requireNativeModule('OnDeviceLlmAndroid')` resolve on a
-//  real build? D1 renamed the module from `OnDeviceLlm`, and the rename is the one
+//  real build? provider contract renamed the module from `OnDeviceLlm`, and the rename is the one
 //  thing in this package that no existing test or build covers, because
 //  autolinking and Expo's module registry exist only at runtime on a device.
 //
@@ -50,7 +50,7 @@ class Spike12Registration {
     const val PACKAGE_LIST_CLASS = "expo.modules.ExpoModulesPackageList"
     const val EXPECTED_NAME = "OnDeviceLlmAndroid"
 
-    /** D1's other half: the main package registers this, and the two must not collide. */
+    /** provider contract's other half: the main package registers this, and the two must not collide. */
     const val SIBLING_NAME = "OnDeviceLlm"
   }
 
@@ -120,7 +120,7 @@ class Spike12Registration {
         ctx.verdict(
           Verdict.REFUTED,
           "the module is registered but declares the name '$declaredName' rather than " +
-            "'$EXPECTED_NAME'. requireNativeModule('$EXPECTED_NAME') would fail. D1's rename is " +
+            "'$EXPECTED_NAME'. requireNativeModule('$EXPECTED_NAME') would fail. provider contract's rename is " +
             "incomplete.",
         )
 

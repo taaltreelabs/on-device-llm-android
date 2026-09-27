@@ -7,21 +7,10 @@
 //  the JVM) or behind the `GenAiBridge` seam.
 //
 //  ---------------------------------------------------------------------------
-//  WAVE 1 STATUS — READ THIS BEFORE TRUSTING ANY OF IT
-//  ---------------------------------------------------------------------------
-//  Nothing below has ever run against a model. **AICore is a preinstalled
-//  system service and is on no AVD image**, so there is no emulator path and no
-//  laptop dev loop (docs/research/android-genai.md §6). What is proven here is
-//  that it *compiles* against the real 1.0.0-beta4 artifacts and that the
-//  device-independent logic passes its JVM tests. Every device-dependent
-//  assumption is marked PROVISIONAL at its site and listed in one place in
-//  DECISIONS.md for the wave-2 hardware spike to walk.
-//
-//  ---------------------------------------------------------------------------
 //  THE BRIDGE PROTOCOL
 //  ---------------------------------------------------------------------------
 //  The module registers as **`OnDeviceLlmAndroid`** — its own name, not the
-//  Apple module's. That is DECISIONS.md D1 (the split) in one line of code: when
+//  Apple module's. That is the package split in one line of code: when
 //  both providers lived in one npm package under one registered name, the two
 //  native halves answered to `OnDeviceLlm` and `src/android/native/resolve.ts`
 //  had to tell them apart by platform, because either could be the thing Expo
@@ -31,7 +20,7 @@
 //  The wire *shape* still mirrors the Apple module's (payloads are returned, not
 //  thrown; stream events carry their `requestId`), because that shape is good and
 //  `src/native/types.ts` is the contract the TypeScript half decodes with. The
-//  wire *surface* no longer does — see D6.
+//  wire *surface* no longer does — see native protocol.
 //
 //  - `availability()`  -> { available, reason?, detail? }
 //  - `capabilities()`  -> { contextWindow, locales, modelLabel?, supports* }
@@ -44,7 +33,7 @@
 //  - `cancel(requestId)` -> Bool
 //
 //  **There is no `resolveToolCall`, no `schemaJson` argument, and no
-//  `supportsLocale`** (DECISIONS.md D6). All three existed in the single-package
+//  `supportsLocale`**. All three existed in the single-package
 //  wave 1 purely so one TypeScript caller could serve both platforms under one
 //  registered module name; the split removed that constraint, so they are gone
 //  rather than kept as always-true stubs and accepted-then-rejected arguments
@@ -54,9 +43,9 @@
 //  `invalidRequest` before it reaches the bridge (§3). The refusal simply lives
 //  in one place now instead of two.
 //
-//  Failures are *returned*, not thrown (D20). Expo's exception channel carries
+//  Failures are *returned*, not thrown. Expo's exception channel carries
 //  a code and a message; our taxonomy also carries `resetDate`, `transient` and
-//  the native code that D9 says we must never lose, and none of that survives
+//  the native code that transient-failure handling says we must never lose, and none of that survives
 //  a `CodedException`.
 //
 
@@ -104,7 +93,7 @@ class OnDeviceLlmAndroidModule : Module() {
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
   /**
-   * `null` when the ML Kit GenAI SDK is not in this build (DECISIONS.md D33).
+   * `null` when the ML Kit GenAI SDK is not in this build.
    *
    * Resolved once, lazily, through a single guarded reflection probe. The
    * module itself loads and works on every Android device; only the provider
@@ -127,7 +116,7 @@ class OnDeviceLlmAndroidModule : Module() {
       engine?.capabilities() ?: unavailableCapabilities()
     }
 
-    // NOTE (DECISIONS.md D6): there is deliberately no `supportsLocale` here.
+    // NOTE: there is deliberately no `supportsLocale` here.
     // The single-package wave 1 exposed one that returned `true` unconditionally,
     // so a TypeScript half written against the Apple native shape would not hit
     // `undefined is not a function`. Android has nothing to answer it with —
@@ -136,7 +125,7 @@ class OnDeviceLlmAndroidModule : Module() {
     // a method whose only possible answer is `true` is worse than an absent one:
     // a caller cannot tell "supported" from "cannot say". The TypeScript half is
     // this package's alone now and never calls it, so it is gone.
-    // `capabilities().locales` is `UNKNOWN`, which is the honest answer, and D7's
+    // `capabilities().locales` is `UNKNOWN`, which is the honest answer, and locale discovery's
     // pre-check is documented as inert on this provider.
 
     // MARK: Generate
@@ -201,7 +190,7 @@ class OnDeviceLlmAndroidModule : Module() {
    * What `capabilities()` reports when there is no SDK to ask.
    *
    * `contextWindow: 0` is the typed "unknown" `normalizeContextWindow` expects
-   * (D9/D11) — not a guess, and not a number anybody can budget against.
+   * — not a guess, and not a number anybody can budget against.
    */
   private fun unavailableCapabilities(): Map<String, Any?> = mapOf(
     "contextWindow" to 0,
@@ -317,7 +306,7 @@ class OnDeviceLlmAndroidModule : Module() {
    * Order matters: our own `BridgeException` already carries a decided payload,
    * a `CancellationException` is the caller's own abort and must never be
    * dressed up as a failure, and only then is the SDK asked whether it
-   * recognises the throwable. The last line is D9's Android form — an
+   * recognises the throwable. The last line is transient-failure handling's Android form — an
    * unclassified `Throwable` becomes `unknown` with `transient: true` and its
    * class and message attached, so it is reportable rather than opaque, and
    * retryable rather than permanent.

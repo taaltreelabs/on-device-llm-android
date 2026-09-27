@@ -1,5 +1,5 @@
 //
-//  Spike09ErrorArrival.kt — PROVISIONAL register item 9 (D5)
+//  Spike09ErrorArrival.kt — PROVISIONAL register item 9
 //
 //  THE QUESTION. Do the error codes arrive as the 21-code table expects, and —
 //  the part with a safety consequence — does a refusal really come back as
@@ -28,7 +28,7 @@
 //      a refusal instead arrives as a `GenAiException`, that is a finding worth
 //      more than the probe cost, and the code is recorded.
 //   C. RETRY DELAY. `getRetryDelay()` is reported for every error seen, because
-//      D5 populates `resetDate` from it and the router treats `rateLimited` as a
+//      stream contract populates `resetDate` from it and the router treats `rateLimited` as a
 //      fallback trigger, so a `Duration` that is always zero would quietly make
 //      that number meaningless.
 //
@@ -96,7 +96,7 @@ class Spike09ErrorArrival {
     ctx.put(
       "overflowMatchesErrorMappingTable",
       if (tabledAsExpected) {
-        "yes: REQUEST_TOO_LARGE/STRUCTURED_OUTPUT_MAX_TOKENS_ERROR -> contextOverflow, as D5 says"
+        "yes: REQUEST_TOO_LARGE/STRUCTURED_OUTPUT_MAX_TOKENS_ERROR -> contextOverflow, as stream contract says"
       } else {
         "no: the table's contextOverflow row did not fire"
       },
@@ -126,7 +126,7 @@ class Spike09ErrorArrival {
     ctx.put("safetyFinishReason", safety?.finishReason ?: "")
     ctx.put(
       "guardrailReachable",
-      "no — no ErrorCode member denotes a refusal (D5). Recorded so the asymmetry stays " +
+      "no — no ErrorCode member denotes a refusal. Recorded so the asymmetry stays " +
         "deliberate: the router's 'guardrail does not fall through' policy is unenforceable here.",
     )
 
@@ -169,9 +169,9 @@ class Spike09ErrorArrival {
         ctx.verdict(
           Verdict.CONFIRMED,
           "oversized input arrived as '$rawCodeName' and ErrorMapping tabled it as " +
-            "'$mappedCode', exactly as D5's table says. Safety probe outcome: $safetyOutcome" +
+            "'$mappedCode', exactly as stream contract's table says. Safety probe outcome: $safetyOutcome" +
             (if (safetyOutcome == "plain-text-refusal") {
-              " — a refusal DID arrive as ordinary prose, confirming D5's reasoning that " +
+              " — a refusal DID arrive as ordinary prose, confirming stream contract's reasoning that " +
                 "guardrail is unreachable on Android"
             } else if (safetyOutcome.startsWith("error:")) {
               " — NOTE: the safety probe raised an ERROR rather than returning prose, which is " +

@@ -1,5 +1,5 @@
 //
-//  Spike02SystemInstruction.kt — PROVISIONAL register item 2 (D4)
+//  Spike02SystemInstruction.kt — PROVISIONAL register item 2
 //
 //  THE QUESTION. Three parts, and they are separable:
 //   (a) what does `isSystemPromptAvailable()` actually return here?
@@ -89,7 +89,7 @@ class Spike02SystemInstruction {
       mapOf("systemInstruction" to (folded.systemInstruction ?: ""), "contents" to folded.contents, "framed" to folded.framed),
     )
     if (folded.systemInstruction != null) {
-      ctx.bug("the fold path produced a SystemInstruction; D4 says the text must be folded instead")
+      ctx.bug("the fold path produced a SystemInstruction; role encoding says the text must be folded instead")
     }
 
     // ---- the four arms ----------------------------------------------------
@@ -146,7 +146,7 @@ class Spike02SystemInstruction {
           Verdict.CONFIRMED,
           "the instruction changed behaviour: isSystemPromptAvailable()=$probed, " +
             "SystemInstruction honoured=$systemWorks, fold path honoured=$foldWorks, " +
-            "baseline ratio=$baseline. The fold path (D4's never-executed branch) " +
+            "baseline ratio=$baseline. The fold path (system-instruction fallback branch) " +
             (if (foldWorks) "works" else "did NOT take effect") + ".",
         )
 

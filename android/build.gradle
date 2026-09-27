@@ -1,5 +1,5 @@
 // ============================================================================
-//  THE DEPENDENCY FIREWALL — DECISIONS.md D33
+//  THE DEPENDENCY FIREWALL — explicit SDK installation
 // ============================================================================
 //
 //  `com.google.mlkit:genai-prompt` is declared `compileOnly`. This module is
@@ -108,7 +108,7 @@ android {
     versionCode 1
     versionName "0.1.0"
 
-    // TRIPWIRE T1. The firewall (D2) is two `Class.forName` lookups by name,
+    // TRIPWIRE T1. The firewall is two `Class.forName` lookups by name,
     // and R8 can see neither: `GenAiEngine` is referenced by no bytecode at
     // all, so a minified consumer build shrinks it away and the provider
     // reports `unsupportedPlatform` on capable hardware — a silent, permanent

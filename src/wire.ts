@@ -127,7 +127,7 @@ export interface NativeRequestArgs {
  *   `maxOutputTokens`**: the native side would take them and misbehave later,
  *   further from the cause.
  *
- * Deliberately *not* checked here, unlike `the main package's src/apple/wire.ts`'s D17 rule:
+ * Deliberately *not* checked here, unlike `the main package's src/apple/wire.ts`'s transcript handling rule:
  * whether the conversation must end with a `user` message. The Prompt API's
  * `Content` has no role field at all — multi-turn attribution is an encoding
  * this provider's Kotlin half has to invent, and it is unverified without

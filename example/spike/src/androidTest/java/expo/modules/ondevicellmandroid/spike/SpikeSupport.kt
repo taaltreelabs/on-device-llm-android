@@ -9,7 +9,7 @@
 //  about the shipped provider rather than about a test's private copy of it.
 //
 //  The one thing deliberately NOT driven through the bridge is anything the
-//  module does not do: `download()` (D3 — `availability()` is a question, not a
+//  module does not do: `download()` (availability contract — `availability()` is a question, not a
 //  command) and raw status ints. Those go through `SpikeMlKit`.
 //
 
@@ -263,7 +263,7 @@ object SpikeText {
    * A crude refusal detector for item 9's safety probe.
    *
    * Crude on purpose: the question is only whether a refusal arrives as ORDINARY
-   * TEXT rather than as a typed error (D5 — there is no `guardrail` code on
+   * TEXT rather than as a typed error (stream contract — there is no `guardrail` code on
    * Android and there cannot be one), so the bar is "does this read like a
    * decline", and the raw text is in the verdict for a human to check.
    */
@@ -301,7 +301,7 @@ object SpikeText {
  * character counts would make the measurement meaningless — the whole point of
  * item 8 is that we do not know the tokens-per-character ratio. So the sizing is
  * done with the counter itself, through the bridge, which also means the count
- * includes the role frame exactly as a real request would (D4's caveat: the
+ * includes the role frame exactly as a real request would (role encoding's caveat: the
  * count is exact for the request we actually build).
  *
  * Bounded at [maxRounds] because every round is a real IPC round trip to a

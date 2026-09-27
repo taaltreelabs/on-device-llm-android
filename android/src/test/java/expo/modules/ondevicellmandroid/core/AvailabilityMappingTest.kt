@@ -2,8 +2,8 @@
 //  AvailabilityMappingTest.kt
 //  OnDeviceLlm — Android
 //
-//  The FeatureStatus mapping (DECISIONS.md D34) and the missing-dependency
-//  reason (D33).
+//  The FeatureStatus mapping and the missing-dependency
+//  reason.
 //
 
 package expo.modules.ondevicellmandroid.core
@@ -40,7 +40,7 @@ class AvailabilityMappingTest {
 
   @Test
   fun `DOWNLOADABLE says in its detail that it did not start a download`() {
-    // D34: availability() is a question, not a command. The router calls it on
+    // availability mapping: availability() is a question, not a command. The router calls it on
     // every route decision and useAvailability calls it on mount; starting a
     // large, possibly metered download as a side effect of asking is the
     // surprise a library must never spring. The detail is the only place a
@@ -100,7 +100,7 @@ class AvailabilityMappingTest {
 
   @Test
   fun `a missing dependency is unsupportedPlatform and names the remedy`() {
-    // D33. `notEnabled` would tell a user to change a setting that does not
+    // SDK installation. `notEnabled` would tell a user to change a setting that does not
     // exist for a problem only a developer can fix; `unsupportedPlatform` is
     // the taxonomy's own words for "the framework is not there at all", which
     // with a compileOnly dependency is literally true. The detail carries the
