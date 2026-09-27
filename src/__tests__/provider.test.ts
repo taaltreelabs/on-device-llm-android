@@ -156,7 +156,7 @@ describe('request validation (rejected before crossing the bridge)', () => {
   });
 
   it('does not require the conversation to end with a user message (role encoding is unresolved)', async () => {
-    // Unlike the main package's src/apple's D17 rule: `Content` has no role field at all
+    // Unlike the main package's src/apple's transcript handling rule: `Content` has no role field at all
     // (docs/research/android-genai.md §1), so this provider does not yet
     // assert a turn-taking discipline it cannot honour on the wire.
     await expect(
@@ -362,7 +362,7 @@ describe('countTokens', () => {
     );
   });
 
-  it('falls back to the estimator inside fitContext when the native counter fails (D9-style)', async () => {
+  it('falls back to the estimator inside fitContext when the native counter fails (transient-failure handling-style)', async () => {
     // Proves the context manager's contract holds for this provider too:
     // a thrown LLMError from countTokens degrades to an estimate rather than
     // aborting the trimming pass, with the fallback recorded in the metadata.

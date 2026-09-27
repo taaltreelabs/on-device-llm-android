@@ -322,7 +322,7 @@ object SpikeBudget {
 /**
  * The suite-wide `NoClassDefFoundError` watch (register item 11).
  *
- * D2's firewall rests on every ML Kit reference being confined to one class. If
+ * SDK installation's firewall rests on every ML Kit reference being confined to one class. If
  * that rule were ever broken — or if R8 removed something the reflection needs —
  * the symptom is a linkage error from an unexpected place, and it could surface
  * in any test. So every test records them here and item 11 reports the lot.

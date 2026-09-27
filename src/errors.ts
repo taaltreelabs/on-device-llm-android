@@ -48,7 +48,7 @@ export function toUnavailableReason(value: string | undefined): UnavailableReaso
  * The `cause` attached to every bridged error: the native diagnostics, kept
  * verbatim so a failure stays reportable. `GenAiException.getErrorCode()` and
  * its message are the minimum; the rest is best-effort diagnostics for the
- * untyped/`UNKNOWN` branch (docs/research/android-genai.md §11 item 1 — "D9's
+ * untyped/`UNKNOWN` branch (docs/research/android-genai.md §11 item 1 — "transient-failure handling's
  * transient-unknown lane is not optional on Android; it is load-bearing from
  * day one").
  *

@@ -5,7 +5,7 @@
 //  **The only file in this module that imports `com.google.mlkit.genai.*`.**
 //
 //  That is a hard rule, not a style preference. `genai-prompt` is a
-//  `compileOnly` dependency (DECISIONS.md D33), so on a device whose app did
+//  `compileOnly` dependency, so on a device whose app did
 //  not opt in, these classes do not exist. A class that references an absent
 //  type fails when it is loaded, so every such reference is confined here and
 //  this class is constructed only through `MlKitPresence.createEngine()`, which
@@ -101,7 +101,7 @@ class GenAiEngine : GenAiBridge {
    *
    * System instructions are beta and gated per resident model (§1), and the
    * answer decides whether system messages become a `SystemInstruction` or are
-   * folded into the first `Content` (D35). It cannot change while the process
+   * folded into the first `Content`. It cannot change while the process
    * runs short of a model OTA, and asking per request would add a round trip to
    * every single generation.
    *
@@ -153,14 +153,14 @@ class GenAiEngine : GenAiBridge {
    *   the only trustworthy number: no Google source corroborates a per-variant
    *   window split, and the docs give one uniform ~4,096-token ceiling (§4).
    *   Guarded at `<= 0` and reported as `0`, which TypeScript turns into
-   *   `UNKNOWN` via `normalizeContextWindow` (D9/D11). The budget is combined
+   *   `UNKNOWN` via `normalizeContextWindow`. The budget is combined
    *   input+output, the same semantics as Apple's `contextSize`, so the Phase 2
    *   formula transfers unchanged.
    * - **`locales`** is always empty. There is no enumeration API:
    *   `genai-common` carries `internal.SapiLanguage`, and `javap` shows it is
    *   an **empty marker annotation with no members** (§4). Empty means UNKNOWN,
    *   not "supports nothing" — a real regression against Apple's 24 enumerated
-   *   tags, and the reason D7's pre-check and D30's `unsupportedLocale`
+   *   tags, and the reason locale discovery's pre-check and fallback policy's `unsupportedLocale`
    *   fallback trigger are both inert on Android.
    * - **`modelLabel`** <- `getBaseModelName()` (`"nano-v3"`). Variants move
    *   under devices via OTA, so it is read, never cached across process runs
@@ -175,9 +175,9 @@ class GenAiEngine : GenAiBridge {
    *   exists anywhere in the artifact. Reporting the SDK's own
    *   `isStructuredOutputFeatureAvailable()` here would be actively harmful —
    *   a `true` the bridge can never honour sends the Phase 4 router toward a
-   *   provider that is about to fail, which is precisely what D27 forbids.
+   *   provider that is about to fail, which is precisely what token-counting contract forbids.
    * - **`systemPromptAvailable`** is an Android-only extra, reported because it
-   *   changes how the request is built (D35) and is therefore worth surfacing
+   *   changes how the request is built and is therefore worth surfacing
    *   to anyone debugging a prompt.
    */
   override suspend fun capabilities(): Map<String, Any?> {
@@ -207,11 +207,11 @@ class GenAiEngine : GenAiBridge {
   /**
    * Run a capability probe, swallowing failure.
    *
-   * D9 in Android dress: a device can report `AVAILABLE` and still fail every
+   * transient-failure handling in Android dress: a device can report `AVAILABLE` and still fail every
    * call (§11.1). One wedged probe must degrade that one field rather than make
    * `capabilities()` throw — a provider that cannot describe itself is still
    * usable, and `contextWindow: 0` is a typed "unknown" the context manager
-   * already handles (D11).
+   * already handles.
    */
   private suspend fun <T> probe(block: suspend () -> T): T? =
     try {
@@ -238,7 +238,7 @@ class GenAiEngine : GenAiBridge {
    * underneath — the `Flow` is a `callbackFlow` over this very callback (§2) —
    * but the callback overload *also* returns the complete
    * `GenerateContentResponse` when it finishes. That settles the one question
-   * D18 had to answer by convention on Apple: **`finish.text` is the SDK's own
+   * snapshot-diff handling had to answer by convention on Apple: **`finish.text` is the SDK's own
    * final text**, not our concatenation of deltas, so a consumer that renders
    * deltas live and then swaps in the final text always converges even if our
    * delta assumption turns out to be wrong.
@@ -264,7 +264,7 @@ class GenAiEngine : GenAiBridge {
       emit(BridgeStreamEvent.Finish(resultFrom(response, request)))
     } catch (cancellation: CancellationException) {
       // The contract says an abort surfaces as an `LLMError` with code
-      // `cancelled`, never as a successful result (D21's Android form).
+      // `cancelled`, never as a successful result (cancellation handling's Android form).
       emit(BridgeStreamEvent.Failure(ErrorMapping.cancelled()))
     } catch (throwable: Throwable) {
       emit(BridgeStreamEvent.Failure(payloadFor(throwable)))
@@ -286,7 +286,7 @@ class GenAiEngine : GenAiBridge {
    *
    * Never throws: a hint that could not be delivered is not a failure worth
    * reporting, because the caller has nothing to do about it and the next real
-   * request will report the same problem properly (D26).
+   * request will report the same problem properly.
    */
   override suspend fun prewarm(): Boolean =
     try {
@@ -310,12 +310,12 @@ class GenAiEngine : GenAiBridge {
    * (§3).
    *
    * The count is exact, with one honest caveat: it is exact for *the request we
-   * actually build*, which includes the invented role frame (D35). Change the
+   * actually build*, which includes the invented role frame. Change the
    * frame and the number changes.
    *
    * Throws rather than guessing, so the Phase 2 `createMeasure` can record
    * `estimatorAfterCounterFailure` and widen its safety margin from 64 tokens
-   * to 256 (D10/D27). A silent estimate here would keep the narrow margin under
+   * to 256. A silent estimate here would keep the narrow margin under
    * an exact-looking number, which is how a "measured" budget overflows.
    */
   override suspend fun countTokens(request: BridgeRequest): Int {

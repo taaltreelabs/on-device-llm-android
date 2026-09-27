@@ -6,7 +6,7 @@
 //  and deliberately *not* the same thing.
 //
 //  Apple's `ResponseStream` yields cumulative snapshots, so the Apple provider
-//  must diff them (DECISIONS.md D5/D18). Android is the opposite and that is
+//  must diff them. Android is the opposite and that is
 //  the single best piece of news in the recon: the internal adapter `zzyp`
 //  implements `StreamingCallback.onNewText(String)` and its bytecode wraps the
 //  incoming `String` straight into a fresh `Candidate` and pushes it to a
@@ -19,22 +19,7 @@
 //  conversion Apple needs is unnecessary here, and re-introducing it would be a
 //  cost paid for nothing plus a second place for the two platforms to disagree.
 //
-//  ############################################################################
-//  # PROVISIONAL — PENDING HARDWARE                                           #
-//  #                                                                          #
-//  # The finding is a *static* one, read from bytecode. It has never been     #
-//  # observed end to end, because AICore runs on no emulator (§6). Chunk      #
-//  # granularity — token, word, sentence, or one chunk for the whole response #
-//  # — is also entirely unknown.                                              #
-//  #                                                                          #
-//  # This class therefore keeps the *posture* D18 takes without the           #
-//  # behaviour: it watches for the signature of a cumulative stream and flags  #
-//  # it on the wire as `reset`, exactly as D18 says such a case must stay      #
-//  # observable rather than be swallowed. It never rewrites a chunk. If the    #
-//  # flag ever fires on real hardware we will know within one request, from    #
-//  # the payload the consumer already receives, instead of guessing at a       #
-//  # duplicated-text bug report.                                              #
-//  ############################################################################
+//  The accumulator detects non-delta streams and exposes a reset signal.
 //
 
 package expo.modules.ondevicellmandroid.core

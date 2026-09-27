@@ -2,7 +2,7 @@
 //  GenAiBridge.kt
 //  OnDeviceLlm — Android
 //
-//  The seam that keeps the dependency firewall airtight (DECISIONS.md D33).
+//  The seam that keeps the dependency firewall airtight.
 //
 //  `OnDeviceLlmAndroidModule` talks only to this interface. Its one implementation,
 //  `GenAiEngine`, is the single file in the module that imports
@@ -40,7 +40,7 @@ interface GenAiBridge {
    * — is delivered as a [BridgeStreamEvent.Finish] or
    * [BridgeStreamEvent.Failure]. Exactly one terminal event per call. A stream
    * that half-delivers and then rejects a promise is the shape that leaves JS
-   * consumers hanging, so the bridge does not have that shape at all (D20).
+   * consumers hanging, so the bridge does not have that shape at all.
    */
   suspend fun stream(request: BridgeRequest, emit: (BridgeStreamEvent) -> Unit)
 

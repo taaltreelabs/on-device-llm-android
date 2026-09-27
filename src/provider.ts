@@ -3,22 +3,16 @@
  * Google's ML Kit GenAI Prompt API / AICore
  * (docs/research/android-genai.md).
  *
- * Fully unit-testable against a scriptable fake of the native module (see
- * `__tests__/fake-native.ts`), which is not a convenience but the only
- * verification available: AICore is a preinstalled system service present on no
- * emulator image (docs/research/android-genai.md §6, §12), so nothing below has
- * ever spoken to a real bridge. `resolveNative()` degrades to
- * `unsupportedPlatform` on every platform that lacks the module, which today
- * includes any Android build whose app has not opted in to the ML Kit dependency
- * (DECISIONS.md D2).
+ * Unit tests use a scriptable fake of the native module (`__tests__/fake-native.ts`).
+ * `resolveNative()` reports `unsupportedPlatform` when native integration is absent.
  *
  * Follows the architecture and wire conventions of the main package's Apple
- * provider (docs/research/android-genai.md §9 — "D17's wire shape … transfers to
+ * provider (docs/research/android-genai.md §9 — "the shared wire shape … transfers to
  * Android unchanged"), with the gaps §10 of that document calls hard:
  * **no structured output, no tool calling, no locale enumeration.** Requests
  * carrying `schema` or `tools` are rejected up front by `buildNativeRequest`
  * (`./wire.ts`) rather than silently answered without them — and, since
- * DECISIONS.md D6, that is the *only* place they are rejected: the bridge no
+ * the native protocol cleanup, that is the *only* place they are rejected: the bridge no
  * longer accepts a `schemaJson` argument to refuse.
  */
 
@@ -53,7 +47,7 @@ export type NativeResolver = () => AndroidNativeModule | undefined;
  * `SystemLanguageModel.supportsLocale` has no Android counterpart — there is
  * no locale enumeration API at all (docs/research/android-genai.md §4:
  * `genai-common`'s `SapiLanguage` is an empty marker annotation with no
- * members). `capabilities().locales` is therefore always `UNKNOWN`, D7's
+ * members). `capabilities().locales` is therefore always `UNKNOWN`, the locale
  * pre-check is permanently inert on this provider, and a locale failure can
  * only ever be discovered — never predicted — at generation time. Accepting
  * a `locale` option here would either be a silent no-op (worse than not
@@ -116,7 +110,7 @@ export class AndroidProvider implements LLMProvider {
       nativeAvailability = await native.availability();
     } catch (err) {
       // A bridge that resolved but cannot answer is not a platform problem —
-      // report it as the transient system failure it is (mirrors Apple's D9
+      // report it as the transient system failure it is (mirrors Apple's transient-failure
       // handling; docs/research/android-genai.md §11 makes the same lane
       // load-bearing on Android).
       return {
@@ -172,7 +166,7 @@ export class AndroidProvider implements LLMProvider {
     }
 
     // `0` (or anything non-positive) means the framework could not tell us.
-    // Becomes the typed `UNKNOWN`, mirroring Apple's D9 guard.
+    // Becomes the typed `UNKNOWN`, mirroring Apple's unknown-window guard.
     const contextWindow = normalizeContextWindow(nativeCapabilities.contextWindow);
 
     return {

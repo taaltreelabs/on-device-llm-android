@@ -7,7 +7,7 @@
 //  keeps draining the battery, and keeps counting against
 //  `PER_APP_BATTERY_USE_QUOTA_EXCEEDED` — while the caller believes it stopped.
 //  `ErrorCode.CANCELLED` existing is encouraging but it is inference, not
-//  evidence (D4's sibling caveat).
+//  evidence (role encoding's sibling caveat).
 //
 //  THE MEASUREMENT. Nothing in userspace can watch AICore, so the question is
 //  answered by proxy, with two independent signals:
@@ -171,7 +171,7 @@ class Spike03CancelSemantics {
     ctx.put("thresholds", mapOf("promptReturnMs" to PROMPT_RETURN_MS, "deliveryGraceMs" to DELIVERY_GRACE_MS))
 
     if (terminals.get() > 1) {
-      ctx.bug("the bridge emitted ${terminals.get()} terminal events; D20 guarantees exactly one")
+      ctx.bug("the bridge emitted ${terminals.get()} terminal events; provider behavior guarantees exactly one")
     }
 
     val reference = SpikeState.fullStreamMs

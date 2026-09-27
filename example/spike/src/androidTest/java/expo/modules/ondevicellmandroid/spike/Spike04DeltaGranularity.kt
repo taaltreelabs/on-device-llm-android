@@ -14,7 +14,7 @@
 //
 //   (a) THE TRIPWIRE ON THE WIRE. `GenAiEngine` already runs every chunk through
 //       `StreamAccumulator` and puts its answer on each delta as `reset` — the
-//       one piece of parity-shaped surface D6 deliberately kept. If any `reset`
+//       one piece of parity-shaped surface native protocol deliberately kept. If any `reset`
 //       arrives, the stream is cumulative and the assumption is refuted without
 //       anything having been rewritten. That flag is read here straight off the
 //       bridge.
@@ -22,7 +22,7 @@
 //       two disagree, the engine's per-request accumulator handling is wrong —
 //       a different bug from a cumulative stream, and one worth separating.
 //
-//  Plus a convergence check that costs nothing and settles D18's Android form:
+//  Plus a convergence check that costs nothing and settles snapshot-diff handling's Android form:
 //  is `finish.text` (the SDK's own final text) equal to our concatenation of the
 //  deltas? If it is not, a consumer that renders deltas and then swaps in the
 //  final text will see a jump, and that is a documented behaviour rather than a
@@ -212,7 +212,7 @@ class Spike04DeltaGranularity {
           "the cumulative tripwire FIRED: $count chunks, with `reset` set on chunks " +
             "$resetFlags. The stream is snapshot-shaped, not delta-per-callback, so the " +
             "bytecode reading in research §2 does not hold end to end and the provider must " +
-            "diff after all (Apple's D5 problem, on Android).",
+            "diff after all (Apple's stream contract problem, on Android).",
         )
 
       count == 1 ->

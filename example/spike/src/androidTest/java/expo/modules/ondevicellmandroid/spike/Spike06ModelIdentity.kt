@@ -21,7 +21,7 @@
 //
 //  The three other feature probes (`caching`, `structuredOutput`, `thinking`) are
 //  free to ask and worth recording: the library hard-codes `supportsGuidedGeneration
-//  = false` regardless of what the SDK says (D2's capability reasoning — a `true`
+//  = false` regardless of what the SDK says (SDK installation's capability reasoning — a `true`
 //  the bridge cannot honour would send the router at a provider about to fail), so
 //  a device answering `true` is a documented divergence, not a bug.
 //
@@ -101,7 +101,7 @@ class Spike06ModelIdentity {
     ctx.put("featureFlags", flags)
     ctx.put(
       "libraryReportsStructuredOutput",
-      "false (hard-coded; D2 — a capability the bridge cannot honour must not be advertised)",
+      "false (hard-coded; SDK installation — a capability the bridge cannot honour must not be advertised)",
     )
 
     when {

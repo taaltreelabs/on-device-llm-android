@@ -143,7 +143,7 @@ for (const name of REQUIRED_KOTLIN) {
 //
 // Not optional here in the way it is for a normal package: README.md carries the
 // Privacy & terms section, which is the whole reason this provider ships
-// separately (DECISIONS.md D1). A tarball without it is a tarball that hides the
+// separately. A tarball without it is a tarball that hides the
 // thing a consumer most needs to read.
 
 for (const p of ['README.md', 'LICENSE']) {

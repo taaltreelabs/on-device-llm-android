@@ -2,7 +2,7 @@
 //  PromptEncodingTest.kt
 //  OnDeviceLlm — Android
 //
-//  The role encoding (DECISIONS.md D35), pinned exactly.
+//  The role encoding, pinned exactly.
 //
 //  These tests cannot tell us whether the encoding *works* — that needs an
 //  allowlisted device, because AICore runs on no emulator
@@ -72,7 +72,7 @@ class PromptEncodingTest {
     )
 
     // Order among them is preserved; their position between turns is not,
-    // because the request has one system slot. A Phase 2 rolling summary (D13)
+    // because the request has one system slot. A Phase 2 rolling summary
     // is exactly the message that arrives mid-list.
     assertEquals("First.\n\n[summary of earlier conversation] …", encoded.systemInstruction)
   }
@@ -118,7 +118,7 @@ class PromptEncodingTest {
 
   @Test
   fun `a conversation that does not end with a user message is rejected`() {
-    // D17's Android form: there is no "continue your own last message"
+    // transcript handling's Android form: there is no "continue your own last message"
     // affordance, and a conversation ending on an assistant turn asks for a
     // second assistant turn with no question in front of it.
     try {
@@ -178,7 +178,7 @@ class PromptEncodingTest {
 
   @Test
   fun `the frame is exactly one label, one colon, one space`() {
-    // Pinned deliberately. The whole point of D35 is that the spike changes
+    // Pinned deliberately. The whole point of prompt encoding is that the spike changes
     // this in one place; if it drifts, this test says so.
     assertEquals("User", RoleFrame.USER_LABEL)
     assertEquals("Model", RoleFrame.MODEL_LABEL)

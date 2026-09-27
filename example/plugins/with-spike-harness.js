@@ -9,13 +9,13 @@
 //      apply from: new File(rootDir.parentFile, "spike/spike.gradle")
 //
 //  …and everything else — the ML Kit `implementation` line (the consumer
-//  opt-in of DECISIONS.md D2, exercised here for real), the androidTest
+//  opt-in from the native setup guide, exercised here for real), the androidTest
 //  dependencies, the androidTest source directory, the `testBuildType` switch
 //  for tripwire T1, and the R8 keep-rule wiring — lives in the tracked file
 //  `example/spike/spike.gradle`, which a human can read and edit without
 //  re-running prebuild.
 //
-//  This is also the durable form of the opt-in that D2 describes in prose
+//  This is also the durable form of the opt-in that SDK installation describes in prose
 //  (`withAppBuildGradle` from a local config plugin), so the spike doubles as
 //  the first real test of that recipe.
 //

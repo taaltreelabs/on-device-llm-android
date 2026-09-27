@@ -5,7 +5,7 @@
  * `LLMProvider` backed by a Kotlin module wrapping Google's ML Kit GenAI Prompt
  * API / AICore (docs/research/android-genai.md).
  *
- * **This lives in its own package on purpose (DECISIONS.md D1).** The main
+ * **This lives in its own package on purpose.** The main
  * package's name promises on-device-and-private and delivers it. Google's terms
  * for this SDK do not, quite: inference runs on the device, and usage and
  * performance metrics are sent to Google. That asterisk is real, passing it on to
@@ -19,15 +19,6 @@
  * Nothing here touches the native module at load time; it is resolved inside
  * method bodies, in a `try`/`catch`, by `./native/resolve`, and a failure to
  * resolve is reported as `unavailable` with reason `unsupportedPlatform`.
- *
- * **Status: PROVISIONAL / experimental.** Nothing in this package has run
- * against a model. AICore is a preinstalled system service present on no
- * emulator image (docs/research/android-genai.md §6), so there is no CI path and
- * no laptop dev loop; what is proven is that the Kotlin half compiles against
- * the real 1.0.0-beta4 artifacts, that its device-independent logic passes its
- * JVM tests, and that this TypeScript half behaves correctly against a
- * scriptable fake of the bridge. DECISIONS.md's PROVISIONAL register lists every
- * assumption a hardware spike still has to settle.
  *
  * No structured output and no tool calling — see `./wire.ts`'s `rejectSchema`
  * and `rejectTools` — and no `locale` configuration option, unlike the main

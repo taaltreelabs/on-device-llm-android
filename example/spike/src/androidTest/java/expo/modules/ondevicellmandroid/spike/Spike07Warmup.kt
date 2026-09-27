@@ -5,7 +5,7 @@
 //  performance one:
 //   (a) does `warmup()` measurably reduce first-token latency?
 //   (b) does calling it on a DOWNLOADABLE device START A DOWNLOAD? If it does,
-//       D3's promise — that nothing in this provider begins a multi-hundred-
+//       availability contract's promise — that nothing in this provider begins a multi-hundred-
 //       megabyte transfer as a side effect of a question — is false for
 //       `prewarm()` too, and that is a bug we would have shipped.
 //
@@ -128,7 +128,7 @@ class Spike07Warmup {
         ctx.verdict(
           Verdict.REFUTED,
           "warmup() moved checkStatus() from DOWNLOADABLE to DOWNLOADING: it STARTS A " +
-            "DOWNLOAD. D3's no-side-effects promise does not extend to prewarm(), and the " +
+            "DOWNLOAD. availability contract's no-side-effects promise does not extend to prewarm(), and the " +
             "provider must either gate prewarm on availability or document that it can begin a " +
             "large transfer. This is the finding of this test even if the timings below are noise.",
         )

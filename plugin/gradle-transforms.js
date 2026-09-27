@@ -16,8 +16,8 @@
 //  applied marker before writing anything, so running `expo prebuild` twice
 //  (or listing the plugin twice) never duplicates a line.
 //
-//  This mirrors DECISIONS.md's "consumer opt-in is three lines, not one"
-//  finding (SPIKE.md, the T2 tripwire) — one function per line.
+//  This mirrors the three native setup requirements documented in
+//  docs/native-setup.md — one function per setting.
 // ============================================================================
 
 /** The coordinate's group:artifact, deliberately without a version, so an
@@ -45,7 +45,7 @@ function addMlKitDependency(contents, version) {
   }
   return contents.replace(
     /dependencies\s*\{/,
-    `dependencies {\n    // on-device-llm-android: the consumer opt-in (DECISIONS.md D2) — required\n    // for the Android provider to report available instead of unsupportedPlatform.\n    implementation '${ML_KIT_COORDINATE_PREFIX}${version}'`
+    `dependencies {\n    // on-device-llm-android: the consumer opt-in — required\n    // for the Android provider to report available instead of unsupportedPlatform.\n    implementation '${ML_KIT_COORDINATE_PREFIX}${version}'`
   );
 }
 
@@ -67,7 +67,7 @@ function applyKotlinMetadataSkip(contents) {
     '',
     '// on-device-llm-android: genai-prompt is compiled with a newer Kotlin than the',
     '// Expo/RN template pins, so the app module\'s own Kotlin compile tasks need to',
-    '// read (not verify) its metadata. See DECISIONS.md D2 / tripwire T2.',
+    '// read (not verify) its metadata. See docs/native-setup.md.',
     'tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {',
     '  compilerOptions {',
     `    freeCompilerArgs.add('${KOTLIN_METADATA_SKIP_MARKER}')`,

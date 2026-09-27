@@ -58,7 +58,7 @@ class BridgeTypesTest {
     }
   }
 
-  // DECISIONS.md D6: `parse` no longer takes `schemaJson` or `tools`. The three
+  // Native protocol: `parse` no longer takes `schemaJson` or `tools`. The three
   // tests that used to pin those two refusals here are replaced by the three
   // below, which pin what the narrowed signature must still guarantee. The
   // refusals themselves moved to `src/wire.ts` (`rejectSchema`, `rejectTools`)
@@ -95,7 +95,7 @@ class BridgeTypesTest {
 
   @Test
   fun `consecutive same-role messages are preserved, never merged`() {
-    // Turn merging is the context manager's business (D12, in the core package),
+    // Turn merging is the context manager's business (turn grouping, in the core package),
     // and the role encoding is PromptEncoding's. A bridge that quietly folded two
     // user messages into one would change the prompt the caller composed and make
     // `countTokens` disagree with what generation consumes.

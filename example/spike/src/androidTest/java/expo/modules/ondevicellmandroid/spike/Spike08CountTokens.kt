@@ -8,7 +8,7 @@
 //  returned by this method."* Is the number consistent with what generation
 //  actually consumes — frame included?
 //
-//  "Frame included" is the load-bearing phrase. D4's caveat is that the count is
+//  "Frame included" is the load-bearing phrase. role encoding's caveat is that the count is
 //  exact for THE REQUEST WE ACTUALLY BUILD, invented `User:`/`Model:` labels and
 //  all. So this test counts the same conversation twice by two different routes
 //  and checks they agree:
@@ -103,7 +103,7 @@ class Spike08CountTokens {
         Verdict.BLOCKED,
         "countTokens() could not be called through the bridge; the library's documented " +
           "behaviour is to throw rather than estimate, so Phase 2 would widen its safety " +
-          "margin from 64 to 256 tokens here (D10/D27) — which is the correct response",
+          "margin from 64 to 256 tokens here — which is the correct response",
       )
       return@runSpike
     }

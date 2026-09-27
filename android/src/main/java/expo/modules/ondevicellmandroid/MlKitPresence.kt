@@ -2,7 +2,7 @@
 //  MlKitPresence.kt
 //  OnDeviceLlm — Android
 //
-//  The runtime half of the dependency firewall (DECISIONS.md D33).
+//  The runtime half of the dependency firewall.
 //
 //  `com.google.mlkit:genai-prompt` is declared `compileOnly` in
 //  `android/build.gradle`, so this module compiles against it and **ships
